@@ -114,7 +114,7 @@ pub(crate) fn create_bedrock_responses_client(
     let key = api_key.ok_or_else(|| AiError::MissingApiKey("bedrock".into()))?;
     openai::Client::builder()
         .api_key(key)
-        .base_url(&format!("{}/openai/v1", url.trim_end_matches("/v1")))
+        .base_url(format!("{}/openai/v1", url.trim_end_matches("/v1")))
         .build()
         .map_err(|e| AiError::Provider(e.to_string()))
 }

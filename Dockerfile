@@ -14,6 +14,8 @@ FROM frontend-deps AS frontend
 COPY tsconfig*.json ./
 COPY packages ./packages
 COPY apps/frontend ./apps/frontend
+COPY apps/tauri/tauri.conf.json apps/tauri/tauri.conf.json
+COPY apps/server/src/api.rs apps/server/src/api.rs
 ARG CONNECT_AUTH_URL=
 ARG CONNECT_AUTH_PUBLISHABLE_KEY=
 ENV CONNECT_AUTH_URL=${CONNECT_AUTH_URL} CONNECT_AUTH_PUBLISHABLE_KEY=${CONNECT_AUTH_PUBLISHABLE_KEY} BUILD_TARGET=web
