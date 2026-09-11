@@ -42,6 +42,7 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$RAILWAY_TOKEN" || { echo 'Configure the production environment Railway project token first.'; exit 1; }
+          railway api 'query { projectToken { projectId environmentId } }' --compact
           previous_id="$(railway deployment list --project 85786670-5d73-45f3-b3b1-dfa3639ec316 --environment eb42188b-57ff-4765-af9c-4c9e74a5827e --service f459814c-b3e5-438c-8400-8bc53eba1bfd --limit 1 --json | jq -r '.[0].id')"
           printf 'Previous deployment: `%s`\n' "$previous_id" >> "$GITHUB_STEP_SUMMARY"
           railway service source connect \
