@@ -39,3 +39,15 @@ Thumbs.db
 *.db-*
 *.sqlite3
 secrets.json
+
+# Never include local credentials, private data, or coding-agent metadata.
+.claude
+.agents
+.codex
+**/*.db
+**/*.db-wal
+**/*.db-shm
+**/secrets.json
+**/*.pdf
+**/*.xls
+**/*.xlsx

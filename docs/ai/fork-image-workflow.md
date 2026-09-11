@@ -15,5 +15,5 @@ those layers, benchmarking cold and warm builds, and restoring normal release
 optimization are follow-up work, not benefits already verified here.
 
 The build is limited to 60 minutes. A failed build or smoke test cannot publish
-an image. The smoke test disables authentication only in its disposable container,
-which is bound to the runner's loopback interface.
+an image. The smoke test disables authentication only in its disposable
+container, which is bound to the runner's loopback interface.

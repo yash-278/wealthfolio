@@ -6,6 +6,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      benchmark:
+        description: Measure unchanged, frontend-only and Rust-only cache reuse
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -18,7 +23,7 @@ jobs:
   image:
     if: github.repository == 'yash-278/wealthfolio'
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     permissions:
       contents: read
       packages: write
@@ -35,7 +40,12 @@ jobs:
           load: true
           tags: wealthfolio:test
           cache-from: type=gha,scope=wealthfolio-amd64
-          cache-to: type=gha,mode=max,scope=wealthfolio-amd64
+          cache-to: |
+            type=gha,mode=max,scope=wealthfolio-amd64
+            type=local,dest=/tmp/wealthfolio-build-cache,mode=max
+          labels: |
+            org.opencontainers.image.source=https://github.com/yash-278/wealthfolio
+            org.opencontainers.image.revision=${{ github.sha }}
       - name: Smoke test disposable container
         shell: bash
         run: |
@@ -53,14 +63,18 @@ jobs:
           curl --fail --silent --show-error --output /dev/null \
             http://127.0.0.1:18088/
       - name: Sign in to GHCR
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if:
+          github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref ==
+          'refs/heads/main')
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish tested image
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if:
+          github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref ==
+          'refs/heads/main')
         shell: bash
         env:
           IMAGE: ghcr.io/yash-278/wealthfolio
@@ -70,3 +84,12 @@ jobs:
           docker push "$IMAGE:sha-$GITHUB_SHA"
           digest="$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:sha-$GITHUB_SHA")"
           printf 'Image: `%s`\n' "$digest" >> "$GITHUB_STEP_SUMMARY"
+      - name: Measure cache reuse
+        if: inputs.benchmark
+        run: bash scripts/benchmark-image-cache.sh
+      - name: Save cache measurements
+        if: always() && inputs.benchmark
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-measurements-${{ github.sha }}
+          path: /tmp/wealthfolio-benchmark/
