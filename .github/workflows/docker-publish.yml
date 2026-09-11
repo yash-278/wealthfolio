@@ -23,6 +23,8 @@ jobs:
   image:
     if: github.repository == 'yash-278/wealthfolio'
     runs-on: ubuntu-24.04
+    outputs:
+      digest: ${{ steps.publish.outputs.digest }}
     timeout-minutes: 90
     permissions:
       contents: read
@@ -78,6 +80,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish tested image
+        id: publish
         if:
           github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref ==
           'refs/heads/main')
@@ -89,6 +92,7 @@ jobs:
           docker tag wealthfolio:test "$IMAGE:sha-$GITHUB_SHA"
           docker push "$IMAGE:sha-$GITHUB_SHA"
           digest="$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:sha-$GITHUB_SHA")"
+          printf 'digest=%s\n' "${digest#*@}" >> "$GITHUB_OUTPUT"
           printf 'Image: `%s`\n' "$digest" >> "$GITHUB_STEP_SUMMARY"
       - name: Measure cache reuse
         if: inputs.benchmark
@@ -99,3 +103,10 @@ jobs:
         with:
           name: cache-measurements-${{ github.sha }}
           path: /tmp/wealthfolio-benchmark/
+
+  deploy:
+    needs: image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/promote-railway.yml
+    with:
+      digest: ${{ needs.image.outputs.digest }}
