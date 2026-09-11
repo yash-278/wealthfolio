@@ -527,6 +527,22 @@ mod tests {
     }
 
     #[test]
+    fn bedrock_luna_and_terra_enable_tools_from_catalog() {
+        let models = &PROVIDER_CATALOG.providers["bedrock"].models;
+        for id in [
+            "openai.gpt-5.6-luna",
+            "openai.gpt-5.6-terra",
+            "openai.gpt-oss-20b",
+            "openai.gpt-oss-120b",
+        ] {
+            assert!(
+                models[id].capabilities.tools,
+                "{id} must receive chat tools"
+            );
+        }
+    }
+
+    #[test]
     fn test_capabilities_loads() {
         let catalog = &*PROVIDER_CATALOG;
         assert!(catalog.capabilities.contains_key("tools"));

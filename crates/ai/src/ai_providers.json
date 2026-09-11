@@ -265,6 +265,20 @@
         }
       ],
       "models": {
+        "openai.gpt-5.6-luna": {
+          "capabilities": {
+            "tools": true,
+            "thinking": true,
+            "vision": true
+          }
+        },
+        "openai.gpt-5.6-terra": {
+          "capabilities": {
+            "tools": true,
+            "thinking": true,
+            "vision": true
+          }
+        },
         "openai.gpt-oss-20b": {
           "capabilities": {
             "tools": true,
