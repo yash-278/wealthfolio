@@ -20,8 +20,8 @@ and plain build logs are saved as an artifact. Inspect CACHED stages alongside
 elapsed time; runner variation means timings alone do not establish cache reuse.
 The initial action duration and image digest are in the same workflow run.
 
-Deployment preserves the /data volume and existing environment variables.
-Build and test jobs do not receive production credentials.
+Deployment preserves the /data volume and existing environment variables. Build
+and test jobs do not receive production credentials.
 
 The `Promote Railway image` workflow accepts an immutable digest and uses the
 `production` environment secret `RAILWAY_TOKEN`. That token must be scoped to
