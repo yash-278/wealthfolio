@@ -272,6 +272,10 @@ impl<E: AiEnvironment> ProviderService<E> {
         self.env
             .secret_store()
             .get_secret(&secret_key)
+            .map(|key| {
+                key.filter(|key| !key.trim().is_empty())
+                    .or_else(|| crate::provider_urls::bedrock_env_key(provider_id))
+            })
             .map_err(|e| AiError::Internal(e.to_string()))
     }
 
@@ -433,6 +437,7 @@ impl<E: AiEnvironment> ProviderService<E> {
                     .and_then(|p| p.default_config.url.clone())
             });
 
+        let url = url.or_else(|| crate::provider_urls::bedrock_env_url(provider_id));
         // Validate URL to prevent panics in rig-core's HTTP client
         url.filter(|u| reqwest::Url::parse(u).is_ok())
     }

@@ -90,6 +90,14 @@ impl<E: AiEnvironment> TitleGenerator<E> {
         let provider_service = ProviderService::new(self.env.clone());
         let api_key = provider_service.get_api_key(provider_id)?;
         let provider_url = provider_service.get_provider_url(provider_id);
+        let provider_url = if provider_id == "bedrock" {
+            Some(
+                crate::provider_urls::validate_bedrock_url(provider_url.as_deref())
+                    .map_err(AiError::InvalidInput)?,
+            )
+        } else {
+            provider_url
+        };
 
         debug!(
             "Generating title with provider {} model {}",
@@ -109,6 +117,38 @@ Title:",
         );
 
         let response = match provider_id {
+            "bedrock" => {
+                use crate::chat::provider_clients::{
+                    bedrock_route, create_bedrock_client, create_bedrock_messages_client,
+                    create_bedrock_responses_client, BedrockRoute,
+                };
+                match bedrock_route(model_id) {
+                    BedrockRoute::Messages => {
+                        create_bedrock_messages_client(api_key, provider_url)?
+                            .agent(model_id)
+                            .max_tokens(self.config.max_tokens as u64)
+                            .build()
+                            .prompt(&prompt)
+                            .await
+                    }
+                    BedrockRoute::Responses => {
+                        create_bedrock_responses_client(api_key, provider_url)?
+                            .agent(model_id)
+                            .additional_params(serde_json::json!({"store": false}))
+                            .build()
+                            .prompt(&prompt)
+                            .await
+                    }
+                    BedrockRoute::Completions => {
+                        create_bedrock_client(api_key, provider_url)?
+                            .agent(model_id)
+                            .build()
+                            .prompt(&prompt)
+                            .await
+                    }
+                }
+                .map_err(|e| AiError::Provider(e.to_string()))?
+            }
             "anthropic" => {
                 let key = api_key.ok_or_else(|| AiError::MissingApiKey(provider_id.to_string()))?;
                 let mut builder = anthropic::Client::<HttpClient>::builder().api_key(&key);
@@ -278,9 +318,14 @@ impl<E: AiEnvironment + 'static> TitleGeneratorTrait for TitleGenerator<E> {
         chat_model_id: &str,
     ) -> String {
         let provider_service = ProviderService::new(self.env.clone());
-        let title_model = provider_service
-            .get_title_model(provider_id)
-            .unwrap_or_else(|| chat_model_id.to_string());
+        let title_model = if provider_id == "bedrock" {
+            // Only use the explicitly selected model, which may be an inference profile.
+            chat_model_id.to_string()
+        } else {
+            provider_service
+                .get_title_model(provider_id)
+                .unwrap_or_else(|| chat_model_id.to_string())
+        };
 
         // Try title model first
         match self

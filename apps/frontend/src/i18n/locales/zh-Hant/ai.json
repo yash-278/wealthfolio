@@ -623,6 +623,9 @@
       "repetitionBlurb": "抑制模型自我重複。",
       "otherTitle": "其他",
       "otherBlurb": "供應商專屬的其他選項。"
-    }
+    },
+    "bedrockRegion": "AWS 區域",
+    "bedrockDescription": "請使用已設定 Bedrock API 金鑰與模型存取權的區域。AWS 會另外收取使用費用。此處不支援 AWS 存取金鑰或工作階段權杖。",
+    "bedrockModels": "儲存區域與 API 金鑰後，重新整理模型清單以測試連線。可用模型因區域而異。使用目錄以外的模型前，請先設定其工具與影像功能。"
   }
 }

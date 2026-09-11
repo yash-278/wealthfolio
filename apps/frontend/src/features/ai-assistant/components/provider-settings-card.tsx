@@ -39,6 +39,7 @@ import type {
   ProviderTuning,
   ProviderTuningOverrides,
 } from "../types";
+import { BedrockRegionField } from "./bedrock-region-field";
 import { ProviderIcon } from "./provider-icons";
 
 interface ProviderSettingsCardProps {
@@ -401,6 +402,9 @@ export function ProviderSettingsCard({
         <CollapsibleContent>
           <div className="border-t px-4 py-5">
             <div className="space-y-5">
+              {provider.id === "bedrock" && (
+                <BedrockRegionField url={provider.customUrl} onSave={onCustomUrlChange} />
+              )}
               {/* API Key Section (only for API providers) */}
               {provider.type === "api" && (
                 <div className="bg-muted/40 rounded-lg p-4">
