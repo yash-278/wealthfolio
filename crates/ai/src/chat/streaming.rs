@@ -39,8 +39,8 @@ use crate::types::{
 
 use super::history::build_user_prompt;
 use super::provider_clients::{
-    create_anthropic_client, create_gemini_client, create_groq_client, create_ollama_client,
-    create_openai_client, create_openrouter_client, remap_provider_error,
+    create_anthropic_client, create_bedrock_client, create_gemini_client, create_groq_client,
+    create_ollama_client, create_openai_client, create_openrouter_client, remap_provider_error,
     validate_ollama_model_if_possible,
 };
 use super::redact_tool_arguments_for_persistence;
@@ -528,6 +528,10 @@ pub(super) async fn spawn_chat_stream<E: AiEnvironment + 'static>(
                 let client = create_ollama_client(provider_url)?;
                 build_with_tools_and_stream!(client, ollama_thinking_params.clone())
             }
+            "bedrock" => {
+                let client = create_bedrock_client(api_key, provider_url)?;
+                build_with_tools_and_stream!(client, openai_thinking_params_no_tools.clone())
+            }
             "openai" => {
                 // Don't pass reasoning params with tools - causes multi-turn errors
                 let client = create_openai_client(api_key, &provider_id, provider_url)?;
@@ -559,6 +563,10 @@ pub(super) async fn spawn_chat_stream<E: AiEnvironment + 'static>(
             "ollama" => {
                 let client = create_ollama_client(provider_url)?;
                 build_without_tools_and_stream!(client, ollama_thinking_params.clone())
+            }
+            "bedrock" => {
+                let client = create_bedrock_client(api_key, provider_url)?;
+                build_without_tools_and_stream!(client, openai_thinking_params_no_tools.clone())
             }
             "openai" => {
                 // Reasoning params OK without tools

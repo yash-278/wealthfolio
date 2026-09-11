@@ -33,8 +33,11 @@ export function useUpdateAiProviderSettings() {
 
   return useMutation({
     mutationFn: (request: UpdateProviderSettingsRequest) => updateAiProviderSettings(request),
-    onSuccess: () => {
+    onSuccess: (_data, request) => {
       queryClient.invalidateQueries({ queryKey: AI_PROVIDERS_KEY });
+      if (request.providerId === "bedrock") {
+        queryClient.resetQueries({ queryKey: QueryKeys.aiProviderModels(request.providerId) });
+      }
     },
   });
 }
@@ -67,6 +70,9 @@ export function useAiProviderApiKey(providerId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: AI_PROVIDERS_KEY });
+      if (providerId === "bedrock") {
+        queryClient.resetQueries({ queryKey: QueryKeys.aiProviderModels(providerId) });
+      }
       toast({
         title: "API key saved",
         variant: "success",
@@ -89,6 +95,9 @@ export function useAiProviderApiKey(providerId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: AI_PROVIDERS_KEY });
+      if (providerId === "bedrock") {
+        queryClient.resetQueries({ queryKey: QueryKeys.aiProviderModels(providerId) });
+      }
       toast({
         title: "API key deleted",
         variant: "success",

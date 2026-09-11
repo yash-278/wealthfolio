@@ -30,3 +30,12 @@ tmp
 # OS/editor files
 .DS_Store
 Thumbs.db
+
+# Local assistant metadata and private application state
+.agents
+.claude
+.codex
+*.db
+*.db-*
+*.sqlite3
+secrets.json

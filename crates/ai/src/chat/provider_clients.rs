@@ -13,7 +13,7 @@ use rig::{
 use std::time::Duration;
 
 use crate::error::AiError;
-use crate::provider_urls::ensure_openai_v1_base_url;
+use crate::provider_urls::{ensure_openai_v1_base_url, validate_bedrock_url};
 
 pub(crate) fn create_anthropic_client(
     api_key: Option<String>,
@@ -78,6 +78,14 @@ pub(crate) fn create_openai_client(
     builder
         .build()
         .map_err(|e| AiError::Provider(e.to_string()))
+}
+
+pub(crate) fn create_bedrock_client(
+    api_key: Option<String>,
+    provider_url: Option<String>,
+) -> Result<openai::CompletionsClient<HttpClient>, AiError> {
+    let url = validate_bedrock_url(provider_url.as_deref()).map_err(AiError::InvalidInput)?;
+    create_openai_client(api_key, "bedrock", Some(url))
 }
 
 pub(crate) fn create_openrouter_client(
@@ -274,5 +282,123 @@ mod tests {
             }
             _ => panic!("expected provider error"),
         }
+    }
+}
+
+#[cfg(test)]
+mod bedrock_tests {
+    use super::*;
+    use futures::StreamExt;
+    use rig::{
+        client::CompletionClient, completion::CompletionModel, streaming::StreamedAssistantContent,
+    };
+    use std::io::{Read, Write};
+
+    #[test]
+    fn bedrock_never_uses_the_openai_default_endpoint() {
+        assert!(create_bedrock_client(Some("synthetic".into()), None).is_err());
+        assert!(create_bedrock_client(
+            Some("synthetic".into()),
+            Some("https://api.openai.com/v1".into())
+        )
+        .is_err());
+        let url = "https://bedrock-mantle.us-east-1.api.aws/v1";
+        assert!(create_bedrock_client(None, Some(url.into())).is_err());
+        let client = create_bedrock_client(Some("synthetic".into()), Some(url.into())).unwrap();
+        assert_eq!(client.base_url(), url);
+    }
+
+    /// Exercise the same Completions transport used by Bedrock against synthetic SSE.
+    /// Production URL validation remains enabled; only this test constructs a local client.
+    #[tokio::test]
+    async fn bedrock_transport_preserves_streamed_text_and_tool_arguments() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            socket
+                .set_read_timeout(Some(Duration::from_secs(5)))
+                .unwrap();
+            let mut bytes = Vec::new();
+            let mut buf = [0; 4096];
+            loop {
+                let n = socket.read(&mut buf).unwrap();
+                assert!(n > 0);
+                bytes.extend_from_slice(&buf[..n]);
+                if let Some(end) = bytes.windows(4).position(|w| w == b"\r\n\r\n") {
+                    let headers = String::from_utf8_lossy(&bytes[..end]);
+                    let length: usize = headers
+                        .lines()
+                        .find_map(|line| {
+                            line.to_ascii_lowercase()
+                                .strip_prefix("content-length:")
+                                .map(|v| v.trim().parse().unwrap())
+                        })
+                        .unwrap();
+                    if bytes.len() >= end + 4 + length {
+                        break;
+                    }
+                }
+            }
+            let request = String::from_utf8(bytes).unwrap();
+            assert!(request.starts_with("POST /v1/chat/completions "));
+            assert!(request
+                .to_ascii_lowercase()
+                .contains("authorization: bearer synthetic-bedrock-key"));
+            let body: serde_json::Value =
+                serde_json::from_str(request.split("\r\n\r\n").nth(1).unwrap()).unwrap();
+            assert_eq!(body["model"], "openai.gpt-oss-20b");
+            assert_eq!(body["stream"], true);
+            assert_eq!(body["tools"][0]["function"]["name"], "get_accounts");
+            let deltas = [
+                serde_json::json!({"content":"Checking accounts."}),
+                serde_json::json!({"tool_calls":[{"index":0,"id":"call_test","type":"function","function":{"name":"get_accounts","arguments":"{"}}]}),
+                serde_json::json!({"tool_calls":[{"index":0,"function":{"arguments":"}"}}]}),
+            ];
+            let mut sse = String::new();
+            for delta in deltas {
+                sse.push_str(&format!("data: {}\n\n", serde_json::json!({"id":"test","object":"chat.completion.chunk","created":1,"model":"openai.gpt-oss-20b","choices":[{"index":0,"delta":delta,"finish_reason":null}]})));
+            }
+            sse.push_str(&format!("data: {}\n\n", serde_json::json!({"id":"test","object":"chat.completion.chunk","created":1,"model":"openai.gpt-oss-20b","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]})));
+            write!(socket, "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", sse.len(), sse).unwrap();
+        });
+        let client = create_openai_client(
+            Some("synthetic-bedrock-key".into()),
+            "bedrock",
+            Some(format!("http://{address}/v1")),
+        )
+        .unwrap();
+        let model = client.completion_model("openai.gpt-oss-20b");
+        let mut stream = tokio::time::timeout(
+            Duration::from_secs(5),
+            model
+                .completion_request("List accounts")
+                .tool(rig::completion::ToolDefinition {
+                    name: "get_accounts".into(),
+                    description: "List accounts".into(),
+                    parameters: serde_json::json!({"type":"object", "properties":{}}),
+                })
+                .stream(),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        let mut text = String::new();
+        let mut tool = None;
+        while let Some(chunk) = tokio::time::timeout(Duration::from_secs(5), stream.next())
+            .await
+            .unwrap()
+        {
+            match chunk.unwrap() {
+                StreamedAssistantContent::Text(delta) => text.push_str(&delta.text),
+                StreamedAssistantContent::ToolCall { tool_call, .. } => tool = Some(tool_call),
+                _ => {}
+            }
+        }
+        server.join().unwrap();
+        assert_eq!(text, "Checking accounts.");
+        let tool = tool.expect("completed tool call");
+        assert_eq!(tool.function.name, "get_accounts");
+        assert_eq!(tool.function.arguments, serde_json::json!({}));
     }
 }

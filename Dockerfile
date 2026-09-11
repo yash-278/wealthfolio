@@ -1,5 +1,5 @@
 # Global build args
-ARG RUST_IMAGE=rust:1.91-alpine
+ARG RUST_IMAGE=rust:1.95-alpine
 
 # Stage 1: build frontend
 # Use --platform=$BUILDPLATFORM to run on the native runner (fast)
@@ -17,7 +17,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY . .
 ENV CI=1
 ENV BUILD_TARGET=web
-RUN npm install -g pnpm@9.9.0 && pnpm install --frozen-lockfile
+RUN npm install -g pnpm@10.33.4 && pnpm install --frozen-lockfile
 # Build only the main app to avoid building workspace addons in this image
 RUN pnpm --filter frontend... build && mv dist /web-dist
 
@@ -65,8 +65,11 @@ COPY crates ./crates
 COPY apps/server ./apps/server
 ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 ENV OPENSSL_STATIC=1
+# Bound compiler memory and optimization time on Railway builders.
+ENV CARGO_BUILD_JOBS=4
+ENV CARGO_PROFILE_RELEASE_OPT_LEVEL=0
 # Build using xx-cargo which handles target flags
-RUN xx-cargo build --release --manifest-path apps/server/Cargo.toml && \
+RUN xx-cargo build --release --config 'profile.release.package."*".opt-level=1' --manifest-path apps/server/Cargo.toml && \
     # Move the binary to a predictable location because the target dir changes with --target
     cp target/$(xx-cargo --print-target-triple)/release/wealthfolio-server /wealthfolio-server
 
@@ -81,15 +84,13 @@ ENV WF_DB_PATH=/data/wealthfolio.db
 ARG CONNECT_API_URL=
 ENV CONNECT_API_URL=${CONNECT_API_URL}
 
-# Run as non-root. chown /data BEFORE the VOLUME directive so named volumes
-# inherit ownership on first creation. Existing volumes from older images
-# need a one-time chown — see docs/self-host/README.md.
+# Run as non-root. Railway supplies the persistent volume at /data.
+# Existing volumes must be owned by UID 1000.
 RUN addgroup -S -g 1000 wealthfolio \
  && adduser -S -u 1000 -G wealthfolio -H -s /sbin/nologin wealthfolio \
  && mkdir -p /data \
  && chown -R wealthfolio:wealthfolio /data
 USER 1000:1000
 
-VOLUME ["/data"]
 EXPOSE 8088
 CMD ["/usr/local/bin/wealthfolio-server"]
