@@ -20,10 +20,8 @@ and plain build logs are saved as an artifact. Inspect CACHED stages alongside
 elapsed time; runner variation means timings alone do not establish cache reuse.
 The initial action duration and image digest are in the same workflow run.
 
-Select a published immutable image in Railway after its run succeeds. Keep the
-/data volume and existing environment variables attached. Record the previous
-image digest before promotion; rollback selects that image again. Publication by
-itself does not change production. No production secrets are used in CI.
+Deployment preserves the /data volume and existing environment variables.
+Build and test jobs do not receive production credentials.
 
 The `Promote Railway image` workflow accepts an immutable digest and uses the
 `production` environment secret `RAILWAY_TOKEN`. That token must be scoped to
@@ -31,3 +29,8 @@ the Wealthfolio project and production environment. It is a deployment
 credential, not an application or AWS key. The workflow records the prior
 deployment, pulls the public image, selects it in Railway, and waits for a new
 successful deployment.
+
+Successful pushes to main automatically promote the exact tested image digest to
+Railway. Pull requests never deploy. The manual promotion workflow remains
+available for rollback. Deployment uses the production environment secret
+RAILWAY_TOKEN.
