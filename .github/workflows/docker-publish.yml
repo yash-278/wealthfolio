@@ -50,9 +50,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          trap 'docker rm -f wealthfolio-smoke >/dev/null 2>&1 || true' EXIT
+          cleanup() {
+            status=$?
+            if [ "$status" -ne 0 ]; then docker logs wealthfolio-smoke; fi
+            docker rm -f wealthfolio-smoke >/dev/null 2>&1 || true
+            exit "$status"
+          }
+          trap cleanup EXIT
           export WF_SECRET_KEY
-          WF_SECRET_KEY="$(openssl rand -hex 32)"
+          WF_SECRET_KEY="$(openssl rand -base64 32)"
           docker run --detach --name wealthfolio-smoke \
             --publish 127.0.0.1:18088:8088 \
             --env WF_SECRET_KEY --env WF_AUTH_REQUIRED=false \
