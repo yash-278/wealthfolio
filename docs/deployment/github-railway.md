@@ -26,7 +26,8 @@ image digest before promotion; rollback selects that image again. Publication by
 itself does not change production. No production secrets are used in CI.
 
 The `Promote Railway image` workflow accepts an immutable digest and uses the
-`production` environment secret `RAILWAY_TOKEN`. That token must be scoped to the
-Wealthfolio project and production environment. It is a deployment credential,
-not an application or AWS key. The workflow records the prior deployment, pulls
-the public image, selects it in Railway, and waits for a new successful deployment.
+`production` environment secret `RAILWAY_TOKEN`. That token must be scoped to
+the Wealthfolio project and production environment. It is a deployment
+credential, not an application or AWS key. The workflow records the prior
+deployment, pulls the public image, selects it in Railway, and waits for a new
+successful deployment.
