@@ -57,6 +57,7 @@ jobs:
             esac
             sleep 5
           done
+          test "$current_id" != "$previous_id"
           test "$status" = SUCCESS
           curl --fail --silent --show-error https://wealthfolio-production-d99b.up.railway.app/api/v1/healthz
           printf 'Promoted image: `ghcr.io/yash-278/wealthfolio@%s`\n' "$DIGEST" >> "$GITHUB_STEP_SUMMARY"
