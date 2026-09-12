@@ -28,6 +28,7 @@ use super::TauriAiEnvironment;
 use crate::services::ConnectService;
 
 pub struct ServiceContext {
+    pub capture_service: Arc<wealthfolio_core::captures::CaptureService>,
     pub base_currency: Arc<RwLock<String>>,
     pub timezone: Arc<RwLock<String>>,
     pub rating_instance_id: Arc<String>,

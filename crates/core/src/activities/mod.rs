@@ -1,4 +1,5 @@
 //! Activities module - domain models, services, and traits.
+pub mod bank_reference;
 
 mod activities_constants;
 mod activities_errors;

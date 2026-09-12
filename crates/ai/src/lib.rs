@@ -163,3 +163,7 @@ pub use provider_model::{
 
 // Provider service
 pub use provider_service::{AiProviderService, AiProviderServiceTrait};
+
+pub mod capture_extractor;
+
+pub mod bedrock;

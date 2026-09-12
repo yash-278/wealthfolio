@@ -9,6 +9,7 @@ repository = "https://github.com/wealthfolio/wealthfolio"
 
 [features]
 default = []
+test-utils = []
 
 [dependencies]
 # Workspace dependencies

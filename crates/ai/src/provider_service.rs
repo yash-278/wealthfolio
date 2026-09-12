@@ -364,6 +364,19 @@ impl AiProviderServiceTrait for AiProviderService {
             ));
         }
 
+        if request.provider_id == "bedrock" {
+            if let Some(url) = request
+                .custom_url
+                .as_deref()
+                .filter(|url| !url.trim().is_empty())
+            {
+                crate::bedrock::validate_endpoint(url).map_err(|e| {
+                    wealthfolio_core::Error::Validation(ValidationError::InvalidInput(
+                        e.to_string(),
+                    ))
+                })?;
+            }
+        }
         let mut settings = self.load_user_settings();
 
         // Get or create provider settings
@@ -479,6 +492,11 @@ impl AiProviderServiceTrait for AiProviderService {
         let requires_api_key = self.provider_requires_api_key(provider_id);
         let api_key = self.get_api_key(provider_id);
         let base_url = self.get_custom_url(provider_id);
+        if provider_id == "bedrock" {
+            crate::bedrock::validate_endpoint(
+                base_url.as_deref().unwrap_or(crate::bedrock::DEFAULT_URL),
+            )?;
+        }
 
         // Check if API key is required but missing
         if requires_api_key && api_key.is_none() {
@@ -536,6 +554,7 @@ impl AiProviderServiceTrait for AiProviderService {
         let base_url = config.base_url.as_deref().unwrap_or(match provider_id {
             "anthropic" => "https://api.anthropic.com",
             "openai" => "https://api.openai.com",
+            "bedrock" => crate::bedrock::DEFAULT_URL,
             "groq" => "https://api.groq.com/openai",
             "openrouter" => "https://openrouter.ai/api",
             "google" => "https://generativelanguage.googleapis.com",

@@ -650,8 +650,31 @@ pub async fn initialize_context(
         warn!("Failed to prune local sync outbox: {}", err);
     }
 
+    let capture_service = Arc::new(wealthfolio_core::captures::CaptureService::new(
+        Arc::new(
+            wealthfolio_storage_sqlite::captures::SqliteCaptureRepository::new(
+                pool.clone(),
+                writer.clone(),
+            ),
+        ),
+        Arc::new(
+            wealthfolio_ai::capture_extractor::BedrockCaptureExtractor::new(
+                ai_provider_service.clone(),
+            ),
+        ),
+        Arc::new(
+            wealthfolio_spending::capture_categorization::CaptureCategorization::new(
+                cash_activity_service.clone(),
+                categorization_rules_service.clone(),
+            ),
+        ),
+        account_service.clone(),
+        activity_service.clone(),
+    ));
+    wealthfolio_core::captures::CaptureService::start_worker(&capture_service);
     Ok(ContextInitResult {
         context: ServiceContext {
+            capture_service,
             base_currency,
             timezone,
             rating_instance_id,

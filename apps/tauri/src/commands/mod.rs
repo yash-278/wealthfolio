@@ -35,3 +35,5 @@ pub mod taxonomy;
 pub mod utilities;
 #[cfg(any(feature = "connect-sync", feature = "device-sync"))]
 pub mod wealthfolio_connect;
+
+pub mod captures;

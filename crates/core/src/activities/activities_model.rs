@@ -960,6 +960,9 @@ pub struct ActivitySearchResponse {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ActivityImport {
+    /// Bank event reference, kept separate from descriptive comments.
+    #[serde(default)]
+    pub bank_reference: Option<String>,
     pub id: Option<String>,
     pub date: String,
     pub symbol: String,
@@ -1961,7 +1964,7 @@ impl From<ActivityImport> for NewActivity {
             metadata,
             needs_review: None,
             source_system: Some("CSV".to_string()),
-            source_record_id: None,
+            source_record_id: import.bank_reference,
             source_group_id: None,
             idempotency_key: None,
             import_run_id: None,

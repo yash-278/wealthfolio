@@ -365,6 +365,7 @@ export interface ActivityBulkMutationResult {
 }
 
 export interface ActivityImport {
+  bankReference?: string;
   id?: string;
   accountId: string;
   currency?: string;

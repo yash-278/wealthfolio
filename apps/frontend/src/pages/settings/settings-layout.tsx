@@ -52,6 +52,9 @@ export default function SettingsLayout() {
             icon: <Icons.TrendingUp className="size-5" />,
           },
           {
+            title: "Quick Add", href: "quick-add", subtitle: "Transaction capture and review", icon: <Icons.Activity className="size-5" />,
+          },
+          {
             title: t("settings:nav.items.spending"),
             href: "spending",
             subtitle: t("settings:nav.subtitles.spending"),

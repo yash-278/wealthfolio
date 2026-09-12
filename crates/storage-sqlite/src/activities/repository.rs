@@ -687,6 +687,17 @@ fn assert_final_cash_floor(activity_db: &ActivityDB) -> Result<()> {
 // Implement the trait for the repository
 #[async_trait]
 impl ActivityRepositoryTrait for ActivityRepository {
+    async fn attach_source_evidence(
+        &self,
+        evidence: wealthfolio_core::activities::bank_reference::SourceEvidence,
+    ) -> Result<()> {
+        self.writer.exec(move |conn| {
+            diesel::sql_query("INSERT INTO activity_source_evidence (activity_id,source_id,body) VALUES (?,?,?) ON CONFLICT(activity_id,source_id) DO NOTHING")
+                .bind::<diesel::sql_types::Text,_>(&evidence.activity_id).bind::<diesel::sql_types::Text,_>(&evidence.source_id).bind::<diesel::sql_types::Text,_>(serde_json::to_string(&evidence)?).execute(conn).map_err(StorageError::from)?;
+            Ok(())
+        }).await
+    }
+
     fn get_activity(&self, activity_id: &str) -> Result<Activity> {
         let mut conn = get_connection(&self.pool)?;
         let activity_db = activities::table

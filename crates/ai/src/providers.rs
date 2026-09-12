@@ -433,6 +433,9 @@ impl<E: AiEnvironment> ProviderService<E> {
                     .and_then(|p| p.default_config.url.clone())
             });
 
+        if provider_id == "bedrock" {
+            return url;
+        }
         // Validate URL to prevent panics in rig-core's HTTP client
         url.filter(|u| reqwest::Url::parse(u).is_ok())
     }

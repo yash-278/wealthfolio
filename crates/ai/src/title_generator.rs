@@ -9,7 +9,7 @@ use reqwest::Client as HttpClient;
 use rig::{
     client::{CompletionClient, Nothing},
     completion::Prompt,
-    providers::{anthropic, gemini, groq, ollama, openai, openrouter},
+    providers::{anthropic, gemini, groq, ollama, openrouter},
 };
 
 use crate::env::AiEnvironment;
@@ -192,16 +192,11 @@ Title:",
                     .map_err(|e| AiError::Provider(e.to_string()))?
             }
             _ => {
-                // Default to OpenAI-compatible
-                let key = api_key.ok_or_else(|| AiError::MissingApiKey(provider_id.to_string()))?;
-                let mut builder = openai::CompletionsClient::<HttpClient>::builder().api_key(&key);
-                if let Some(url) = provider_url {
-                    let normalized = ensure_openai_v1_base_url(&url);
-                    builder = builder.base_url(&normalized);
-                }
-                let client = builder
-                    .build()
-                    .map_err(|e| AiError::Provider(e.to_string()))?;
+                let client = crate::chat::provider_clients::create_openai_client(
+                    api_key,
+                    provider_id,
+                    provider_url,
+                )?;
                 client
                     .agent(model_id)
                     .build()

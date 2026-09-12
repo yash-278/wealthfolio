@@ -1,0 +1,51 @@
+# Quick Add implementation validation
+
+Date: 2026-09-12. Branch: `codex/quick-add-capture`. Implementation base:
+`8f6f9898d30e84d7215e01d3d06cd65e02c9ab1b`.
+
+## Local checks
+
+- Frontend suite: 2,129 tests passed across 257 files. After the final settings
+  correction, all nine Quick Add UI tests passed again.
+- Workspace type checking passed. The final frontend-only check also passed.
+- Web production build passed. It reported the existing large-chunk warning.
+- Workspace lint completed with zero errors and existing warnings. The final
+  Quick Add lint check reported no warnings.
+- Rust workspace compiled both desktop and web targets. The full run completed
+  with 3,348 passed, 15 failed and 17 ignored tests. The failures are in two AI
+  snapshot targets: `tool_outputs_parity` and `tool_schemas`. Their producer
+  code, fixtures and stored snapshots are unchanged from the implementation
+  base. Differences concern existing tax, instrument-type and buy-amount output.
+  These snapshots were not accepted or modified by this feature.
+- The core regression rerun passed 2,006 unit tests and 12 integration tests.
+  The final reference-group expansion then passed all 21 API tests.
+- Bedrock endpoint and client-routing tests passed, including rejection of
+  non-AWS endpoints. Real-provider calls remain opt-in.
+- Synthetic Bedrock evaluation: 12 regression cases and a broader 16-case run
+  passed. See [evaluation details](bedrock-evaluation.md) for tuning history,
+  token costs and limitations.
+
+The API suite exercises temporary SQLite migration, durable capture acceptance,
+versioned review, retries, budget limits, source cleanup, token permissions,
+concurrent writes, crash recovery, statement reconciliation, category learning,
+transfer linking, partial refunds and pending completion in both arrival orders.
+All 21 API tests passed after the final same-batch reference correction; the
+full-workspace counts above precede that correction.
+
+## Review and release boundaries
+
+Standards and specification reviews were performed against the implementation
+base and updated after fixes. They identified credential routing, review flags,
+qualification versioning, pagination, date provenance and pending completion;
+those findings were addressed and checked at their relevant API/UI seams.
+
+UI uses existing Wealthfolio components and semantic tokens. Automated UI tests
+cover paste, receipts, review, settings, refund linking and token controls. No
+interactive visual, keyboard, light/dark-theme or physical iPhone acceptance was
+performed. The supplied Shortcut is a manual recipe and request template.
+
+No production deployment or financial data changes were made. Automatic posting
+still requires the user's supervised trial and qualification confirmation.
+
+The original checkout’s uncommitted Bedrock work was preserved. This isolated
+branch must be integrated with that work before any production deployment.
