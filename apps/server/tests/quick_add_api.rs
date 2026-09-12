@@ -1374,8 +1374,8 @@ async fn bedrock_luna_qualification() {
     let corpus: Option<serde_json::Value> = std::env::var("QUICK_ADD_QUALIFICATION_CORPUS")
         .ok()
         .map(|path| serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap());
-    let cases: Vec<(&str, &str, Option<(&str, &str, &str)>)> = if let Some(corpus) = corpus.as_ref()
-    {
+    type QualificationCase<'a> = (&'a str, &'a str, Option<(&'a str, &'a str, &'a str)>);
+    let cases: Vec<QualificationCase<'_>> = if let Some(corpus) = corpus.as_ref() {
         corpus["cases"]
             .as_array()
             .unwrap()
