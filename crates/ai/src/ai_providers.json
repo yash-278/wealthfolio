@@ -1,45 +1,5 @@
 {
   "providers": {
-    "bedrock": {
-      "name": "AWS Bedrock",
-      "type": "api",
-      "icon": "LogoOpenAI",
-      "description": "GPT-5.6 Luna through Amazon Bedrock Mantle",
-      "envKey": "AWS_BEARER_TOKEN_BEDROCK",
-      "defaultConfig": {
-        "enabled": false,
-        "priority": 60,
-        "url": "https://bedrock-mantle.us-east-1.api.aws/openai/v1"
-      },
-      "connectionFields": [
-        {
-          "key": "apiKey",
-          "label": "Bedrock API key",
-          "placeholder": "ABSK...",
-          "type": "password",
-          "required": true
-        },
-        {
-          "key": "baseUrl",
-          "label": "Bedrock Mantle URL",
-          "type": "text",
-          "required": true,
-          "placeholder": "https://bedrock-mantle.us-east-1.api.aws/openai/v1"
-        }
-      ],
-      "models": {
-        "openai.gpt-5.6-luna": {
-          "capabilities": {
-            "tools": true,
-            "thinking": false,
-            "vision": true
-          }
-        }
-      },
-      "defaultModel": "openai.gpt-5.6-luna",
-      "titleModelId": "openai.gpt-5.6-luna",
-      "documentationUrl": "https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-openai-gpt-56-luna.html"
-    },
     "ollama": {
       "name": "Ollama",
       "type": "local",
@@ -283,6 +243,61 @@
       "tuning": {
         "temperature": 0.2,
         "maxTokens": 16384
+      }
+    },
+    "bedrock": {
+      "name": "Amazon Bedrock",
+      "type": "api",
+      "icon": "Bedrock",
+      "description": "AWS-hosted models. Usage is billed to your AWS account. Requires a Bedrock API key and region.",
+      "envKey": "AWS_BEARER_TOKEN_BEDROCK",
+      "defaultConfig": {
+        "enabled": false,
+        "priority": 70
+      },
+      "connectionFields": [
+        {
+          "key": "apiKey",
+          "label": "Bedrock API key",
+          "type": "password",
+          "placeholder": "Enter your Amazon Bedrock API key",
+          "required": true
+        }
+      ],
+      "models": {
+        "openai.gpt-5.6-luna": {
+          "capabilities": {
+            "tools": true,
+            "thinking": true,
+            "vision": true
+          }
+        },
+        "openai.gpt-5.6-terra": {
+          "capabilities": {
+            "tools": true,
+            "thinking": true,
+            "vision": true
+          }
+        },
+        "openai.gpt-oss-20b": {
+          "capabilities": {
+            "tools": true,
+            "thinking": true,
+            "vision": false
+          }
+        },
+        "openai.gpt-oss-120b": {
+          "capabilities": {
+            "tools": true,
+            "thinking": true,
+            "vision": false
+          }
+        }
+      },
+      "defaultModel": "openai.gpt-oss-20b",
+      "documentationUrl": "https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys.html",
+      "tuning": {
+        "maxTokens": 4096
       }
     },
     "openrouter": {

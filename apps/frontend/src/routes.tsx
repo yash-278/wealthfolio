@@ -102,7 +102,14 @@ export function AppRoutes() {
         <Route path="/" element={<AppLayout />}>
           <Route index element={<PortfolioPage />} />
           <Route path="dashboard" element={<PortfolioPage />} />
-          <Route path="quick-add/review" element={<div className="mx-auto max-w-3xl p-6"><ReviewPanel /></div>} />
+          <Route
+            path="quick-add/review"
+            element={
+              <div className="mx-auto max-w-3xl p-6">
+                <ReviewPanel />
+              </div>
+            }
+          />
           <Route path="quick-add" element={<QuickAddPage />} />
           <Route path="activities" element={<ActivityPage />} />
           <Route path="activities/manage" element={<ActivityManagerPage />} />

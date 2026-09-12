@@ -1352,6 +1352,8 @@ async fn bedrock_luna_qualification() {
         .unwrap();
     drop(key);
     let app = app_router(state, &config);
+    let provider = request(app.clone(), "PUT", "/api/v1/ai/providers/settings", serde_json::json!({"providerId":"bedrock","enabled":true,"customUrl":"https://bedrock-mantle.us-east-1.api.aws/v1"})).await;
+    assert!(provider.0.is_success());
     let account = request(app.clone(), "POST", "/api/v1/accounts", serde_json::json!({"name":"Synthetic qualification bank","accountType":"CASH","currency":"INR","isDefault":false,"isActive":true,"trackingMode":"TRANSACTIONS"})).await.1;
     let configured = request(app.clone(), "PUT", "/api/v1/quick-add/settings", serde_json::json!({"provider":"bedrock","model":"openai.gpt-5.6-luna","monthlyBudgetMicros":250000,"automaticPosting":true,"evaluationPassed":true,"extractionVersion":"bedrock-luna-capture-v3","supervisedTrialCompleted":true,"timezone":"Asia/Kolkata","mappings":[{"alias":"1234","accountId":account["id"]}]})).await;
     assert!(configured.0.is_success());

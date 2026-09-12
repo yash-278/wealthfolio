@@ -15,7 +15,7 @@ use crate::provider_model::{
     SetDefaultProviderRequest, UpdateProviderSettingsRequest, AI_PROVIDER_SETTINGS_KEY,
     AI_PROVIDER_SETTINGS_SCHEMA_VERSION,
 };
-use crate::provider_urls::openai_compatible_models_url;
+use crate::provider_urls::{openai_compatible_models_url, validate_bedrock_url};
 use crate::types::normalize_tools_allowlist;
 
 /// Service trait for AI provider operations.
@@ -134,13 +134,7 @@ impl AiProviderService {
 
     /// Check if a provider has an API key stored.
     fn has_api_key(&self, provider_id: &str) -> bool {
-        let secret_key = Self::secret_key_for_provider(provider_id);
-        self.secret_store
-            .get_secret(&secret_key)
-            .ok()
-            .flatten()
-            .map(|s| !s.is_empty())
-            .unwrap_or(false)
+        self.get_api_key(provider_id).is_some()
     }
 
     /// Get the API key for a provider (internal use only).
@@ -151,6 +145,7 @@ impl AiProviderService {
             .ok()
             .flatten()
             .filter(|s| !s.is_empty())
+            .or_else(|| crate::provider_urls::bedrock_env_key(provider_id))
     }
 
     /// Check if provider requires an API key based on catalog.
@@ -326,7 +321,9 @@ impl AiProviderServiceTrait for AiProviderService {
                     enabled: user.enabled,
                     favorite: user.favorite,
                     selected_model: user.selected_model.clone(),
-                    custom_url: user.custom_url,
+                    custom_url: user
+                        .custom_url
+                        .or_else(|| crate::provider_urls::bedrock_env_url(id)),
                     // Use catalog priority if user hasn't explicitly set one
                     priority: if user.priority == 0 || user.priority == default_priority() {
                         catalog_provider.default_config.priority
@@ -364,19 +361,6 @@ impl AiProviderServiceTrait for AiProviderService {
             ));
         }
 
-        if request.provider_id == "bedrock" {
-            if let Some(url) = request
-                .custom_url
-                .as_deref()
-                .filter(|url| !url.trim().is_empty())
-            {
-                crate::bedrock::validate_endpoint(url).map_err(|e| {
-                    wealthfolio_core::Error::Validation(ValidationError::InvalidInput(
-                        e.to_string(),
-                    ))
-                })?;
-            }
-        }
         let mut settings = self.load_user_settings();
 
         // Get or create provider settings
@@ -396,6 +380,13 @@ impl AiProviderServiceTrait for AiProviderService {
             provider_settings.selected_model = Some(model);
         }
         if let Some(url) = request.custom_url {
+            if request.provider_id == "bedrock" && !url.trim().is_empty() {
+                validate_bedrock_url(Some(&url)).map_err(|message| {
+                    wealthfolio_core::errors::Error::Validation(ValidationError::InvalidInput(
+                        message,
+                    ))
+                })?;
+            }
             provider_settings.custom_url = if url.trim().is_empty() {
                 None
             } else {
@@ -491,12 +482,17 @@ impl AiProviderServiceTrait for AiProviderService {
 
         let requires_api_key = self.provider_requires_api_key(provider_id);
         let api_key = self.get_api_key(provider_id);
-        let base_url = self.get_custom_url(provider_id);
-        if provider_id == "bedrock" {
-            crate::bedrock::validate_endpoint(
-                base_url.as_deref().unwrap_or(crate::bedrock::DEFAULT_URL),
-            )?;
-        }
+        let base_url = self
+            .get_custom_url(provider_id)
+            .or_else(|| crate::provider_urls::bedrock_env_url(provider_id));
+        let base_url = if provider_id == "bedrock" {
+            Some(
+                validate_bedrock_url(base_url.as_deref())
+                    .map_err(|message| ProviderApiError::ProviderError { message })?,
+            )
+        } else {
+            base_url
+        };
 
         // Check if API key is required but missing
         if requires_api_key && api_key.is_none() {
@@ -571,7 +567,9 @@ impl AiProviderServiceTrait for AiProviderService {
 
         // Build HTTP client and request
         let client = reqwest::Client::new();
-        let mut request = client.get(&models_url);
+        let mut request = client
+            .get(&models_url)
+            .timeout(std::time::Duration::from_secs(30));
 
         // Add authorization header based on provider
         if let Some(ref api_key) = config.api_key {
@@ -594,6 +592,18 @@ impl AiProviderServiceTrait for AiProviderService {
 
         if !response.status().is_success() {
             let status = response.status();
+            if provider_id == "bedrock" {
+                let detail = match status.as_u16() {
+                    401 | 403 => {
+                        "Check your Bedrock API key, its expiry, and model access in this region."
+                    }
+                    429 => "AWS throttled this request. Wait before retrying.",
+                    _ => "Check the selected region and Bedrock service availability.",
+                };
+                return Err(ProviderApiError::ProviderError {
+                    message: format!("Amazon Bedrock returned HTTP {status}. {detail}"),
+                });
+            }
             let body = response.text().await.unwrap_or_default();
             return Err(ProviderApiError::ProviderError {
                 message: format!("Provider returned error {}: {}", status, body),
@@ -729,5 +739,133 @@ impl AiProviderServiceTrait for AiProviderService {
             models,
             supports_listing: true,
         })
+    }
+}
+
+#[cfg(test)]
+mod bedrock_tests {
+    use super::*;
+    use crate::env::test_env::MockSecretStore;
+    use std::sync::RwLock;
+    use wealthfolio_core::settings::{Settings, SettingsUpdate};
+
+    #[derive(Default)]
+    struct SettingsRepo(RwLock<String>);
+
+    #[async_trait]
+    impl SettingsRepositoryTrait for SettingsRepo {
+        fn get_settings(&self) -> Result<Settings> {
+            Ok(Settings::default())
+        }
+        async fn update_settings(&self, _: &SettingsUpdate) -> Result<()> {
+            Ok(())
+        }
+        fn get_setting(&self, _: &str) -> Result<String> {
+            Ok(self.0.read().unwrap().clone())
+        }
+        async fn update_setting(&self, _: &str, value: &str) -> Result<()> {
+            *self.0.write().unwrap() = value.to_string();
+            Ok(())
+        }
+        fn get_distinct_currencies_excluding_base(&self, _: &str) -> Result<Vec<String>> {
+            Ok(vec![])
+        }
+    }
+
+    #[test]
+    fn bedrock_environment_configuration() {
+        if std::env::var("WF_TEST_BEDROCK_ENV").is_err() {
+            let result = std::process::Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "provider_service::bedrock_tests::bedrock_environment_configuration",
+                ])
+                .env("WF_TEST_BEDROCK_ENV", "1")
+                .env("AWS_REGION", "ap-south-1")
+                .env("AWS_BEARER_TOKEN_BEDROCK", "synthetic-env-key")
+                .output()
+                .unwrap();
+            assert!(
+                result.status.success(),
+                "environment configuration child failed"
+            );
+            return;
+        }
+        let secrets = Arc::new(MockSecretStore::default());
+        let service = AiProviderService::new(
+            Arc::new(SettingsRepo::default()),
+            secrets.clone(),
+            include_str!("ai_providers.json"),
+        )
+        .unwrap();
+        let config = service.get_provider_config("bedrock").unwrap();
+        assert_eq!(config.api_key.as_deref(), Some("synthetic-env-key"));
+        assert_eq!(
+            config.base_url.as_deref(),
+            Some("https://bedrock-mantle.ap-south-1.api.aws/v1")
+        );
+        let providers = service.get_ai_providers().unwrap();
+        let bedrock = providers
+            .providers
+            .iter()
+            .find(|p| p.id == "bedrock")
+            .unwrap();
+        assert!(bedrock.has_api_key);
+        assert!(!serde_json::to_string(&providers)
+            .unwrap()
+            .contains("synthetic-env-key"));
+        secrets
+            .set_secret("ai_bedrock", "synthetic-saved-key")
+            .unwrap();
+        assert_eq!(
+            service
+                .get_provider_config("bedrock")
+                .unwrap()
+                .api_key
+                .as_deref(),
+            Some("synthetic-saved-key")
+        );
+        assert!(service.get_provider_config("openai").is_err());
+    }
+
+    #[tokio::test]
+    async fn bedrock_configuration_is_separate_and_requires_an_aws_endpoint() {
+        let repo = Arc::new(SettingsRepo::default());
+        let secrets = Arc::new(MockSecretStore::default());
+        secrets
+            .set_secret("ai_openai", "synthetic-openai-key")
+            .unwrap();
+        let service = AiProviderService::new(
+            repo.clone(),
+            secrets.clone(),
+            include_str!("ai_providers.json"),
+        )
+        .unwrap();
+        assert!(service.get_provider_config("bedrock").is_err());
+        let invalid = serde_json::from_value(serde_json::json!({
+            "providerId":"bedrock", "customUrl":"https://api.openai.com/v1"
+        }))
+        .unwrap();
+        assert!(service.update_provider_settings(invalid).await.is_err());
+        assert!(repo.0.read().unwrap().is_empty());
+        let endpoint = "https://bedrock-mantle.ap-south-1.api.aws/v1";
+        let update = serde_json::from_value(serde_json::json!({
+            "providerId":"bedrock", "customUrl":endpoint, "enabled":true
+        }))
+        .unwrap();
+        service.update_provider_settings(update).await.unwrap();
+        assert!(matches!(
+            service.get_provider_config("bedrock"),
+            Err(ProviderApiError::MissingApiKey { .. })
+        ));
+        secrets
+            .set_secret("ai_bedrock", "synthetic-bedrock-key")
+            .unwrap();
+        let config = service.get_provider_config("bedrock").unwrap();
+        assert_eq!(config.base_url.as_deref(), Some(endpoint));
+        assert_eq!(config.api_key.as_deref(), Some("synthetic-bedrock-key"));
+        assert!(!repo.0.read().unwrap().contains("synthetic"));
+        secrets.delete_secret("ai_bedrock").unwrap();
+        assert!(service.get_provider_config("bedrock").is_err());
     }
 }

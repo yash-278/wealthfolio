@@ -364,6 +364,7 @@ fn eval_api_key_from_env(provider: &str) -> Option<String> {
         "gemini" | "google" => &["GEMINI_API_KEY", "GOOGLE_API_KEY"],
         "groq" => &["GROQ_API_KEY"],
         "openrouter" => &["OPENROUTER_API_KEY"],
+        "bedrock" => &["AWS_BEARER_TOKEN_BEDROCK"],
         _ => &["OPENAI_API_KEY"],
     };
     names

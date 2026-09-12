@@ -272,6 +272,10 @@ impl<E: AiEnvironment> ProviderService<E> {
         self.env
             .secret_store()
             .get_secret(&secret_key)
+            .map(|key| {
+                key.filter(|key| !key.trim().is_empty())
+                    .or_else(|| crate::provider_urls::bedrock_env_key(provider_id))
+            })
             .map_err(|e| AiError::Internal(e.to_string()))
     }
 
@@ -433,6 +437,7 @@ impl<E: AiEnvironment> ProviderService<E> {
                     .and_then(|p| p.default_config.url.clone())
             });
 
+        let url = url.or_else(|| crate::provider_urls::bedrock_env_url(provider_id));
         if provider_id == "bedrock" {
             return url;
         }
@@ -522,6 +527,22 @@ mod tests {
         assert!(!catalog.providers.is_empty());
         assert!(catalog.providers.contains_key("openai"));
         assert!(catalog.providers.contains_key("ollama"));
+    }
+
+    #[test]
+    fn bedrock_luna_and_terra_enable_tools_from_catalog() {
+        let models = &PROVIDER_CATALOG.providers["bedrock"].models;
+        for id in [
+            "openai.gpt-5.6-luna",
+            "openai.gpt-5.6-terra",
+            "openai.gpt-oss-20b",
+            "openai.gpt-oss-120b",
+        ] {
+            assert!(
+                models[id].capabilities.tools,
+                "{id} must receive chat tools"
+            );
+        }
     }
 
     #[test]

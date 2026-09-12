@@ -64,7 +64,10 @@ impl CaptureExtractor for BedrockCaptureExtractor {
         }
         let required: Vec<_> = properties.keys().cloned().collect();
         let schema = json!({"type":"object","additionalProperties":false,"required":["events"],"properties":{"events":{"type":"array","items":{"type":"object","additionalProperties":false,"required":required,"properties":properties}}}});
-        let response = self.client.post(format!("{}/chat/completions", config.base_url.unwrap_or_else(||crate::bedrock::DEFAULT_URL.into()).trim_end_matches('/')))
+        let endpoint =
+            crate::bedrock::capture_endpoint(config.base_url.as_deref().ok_or_else(failure)?)
+                .map_err(|_| failure())?;
+        let response = self.client.post(endpoint)
             .bearer_auth(config.api_key.ok_or_else(failure)?)
             .json(&json!({"model":model,"reasoning_effort":"none","max_completion_tokens":4000,
                 "response_format":{"type":"json_schema","json_schema":{"name":"capture_events","strict":true,"schema":schema}},
