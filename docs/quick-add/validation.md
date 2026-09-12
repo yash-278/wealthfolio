@@ -16,7 +16,8 @@ Date: 2026-09-12. Branch: `codex/quick-add-capture`. Implementation base:
   snapshot targets: `tool_outputs_parity` and `tool_schemas`. Their producer
   code, fixtures and stored snapshots are unchanged from the implementation
   base. Differences concern existing tax, instrument-type and buy-amount output.
-  These snapshots were not accepted or modified by this feature.
+  These stale expectations were subsequently reviewed and refreshed during
+  release validation, as recorded below.
 - The core regression rerun passed 2,006 unit tests and 12 integration tests.
   The final reference-group expansion then passed all 21 API tests.
 - Bedrock endpoint and client-routing tests passed, including rejection of
@@ -53,3 +54,13 @@ selection and chat routing. After integration, 21 capture API tests, 97 AI unit
 tests, 12 UI tests and the 16-case synthetic Luna evaluation passed. Workspace
 formatting, TypeScript checks and the frontend production build also passed. The
 evaluation configures its temporary provider with an explicit AWS region.
+
+## Release snapshot correction
+
+The server test dependency enables the AI `test-utils` feature across workspace
+tests. This exposed 15 previously gated snapshot mismatches in code unchanged
+from fork main. Expected outputs were checked against the current asset-taxonomy
+and activity-draft implementations. Snapshots now include instrument types and
+optional tax fields, and preserve an unstated BUY amount as null until commit.
+No tool implementation changed. All 51 output snapshots and 20 schema snapshots
+pass with `test-utils` explicitly enabled and snapshot updates disabled.

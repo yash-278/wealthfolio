@@ -11,6 +11,7 @@ expression: result
       "currency": "USD",
       "displayCode": "VT",
       "exchangeMic": "ARCX",
+      "instrumentType": "EQUITY",
       "label": "VT - Vanguard Total World Stock Index Fund ETF Shares",
       "matchedBy": "label",
       "name": "Vanguard Total World Stock Index Fund ETF Shares",

@@ -52,6 +52,9 @@ expression: snapshot
             "symbol": {
               "type": "string"
             },
+            "tax": {
+              "type": "number"
+            },
             "unitPrice": {
               "type": "number"
             }
