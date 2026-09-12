@@ -51,5 +51,5 @@ The original checkout's uncommitted Bedrock work was preserved. This branch was
 integrated with fork main at `22d3d809`, retaining its explicit Bedrock region
 selection and chat routing. After integration, 21 capture API tests, 97 AI unit
 tests, 12 UI tests and the 16-case synthetic Luna evaluation passed. Workspace
-formatting, TypeScript checks and the frontend production build also passed.
-The evaluation configures its temporary provider with an explicit AWS region.
+formatting, TypeScript checks and the frontend production build also passed. The
+evaluation configures its temporary provider with an explicit AWS region.

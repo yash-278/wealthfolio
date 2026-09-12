@@ -59,8 +59,8 @@ pub fn evidenced_payment(
     if dates.len() > 1 {
         return false;
     }
-    if !source.contains(&fields.date)
-        && !(capture.input.input_kind == InputKind::TypedNote
+    if !(source.contains(&fields.date)
+        || capture.input.input_kind == InputKind::TypedNote
             && settings.typed_note_today
             && local_submission_date.as_deref() == Some(fields.date.as_str()))
     {
