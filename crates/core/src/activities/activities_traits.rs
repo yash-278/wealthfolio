@@ -10,6 +10,15 @@ use std::collections::{HashMap, HashSet};
 /// Trait defining the contract for Activity repository operations.
 #[async_trait]
 pub trait ActivityRepositoryTrait: Send + Sync {
+    async fn attach_source_evidence(
+        &self,
+        _evidence: super::bank_reference::SourceEvidence,
+    ) -> Result<()> {
+        Err(crate::Error::Unexpected(
+            "Source evidence storage unavailable".into(),
+        ))
+    }
+
     fn get_activity(&self, activity_id: &str) -> Result<Activity>;
     /// Returns the other activity sharing `group_id`, excluding `exclude_id`.
     fn find_transfer_counterpart(
@@ -335,6 +344,15 @@ pub trait ActivityRepositoryTrait: Send + Sync {
 /// Trait defining the contract for Activity service operations.
 #[async_trait]
 pub trait ActivityServiceTrait: Send + Sync {
+    async fn attach_source_evidence(
+        &self,
+        _evidence: super::bank_reference::SourceEvidence,
+    ) -> Result<()> {
+        Err(crate::Error::Unexpected(
+            "Source evidence storage unavailable".into(),
+        ))
+    }
+
     fn get_activity(&self, activity_id: &str) -> Result<Activity>;
     fn get_activities(&self) -> Result<Vec<Activity>>;
     fn get_activities_by_account_id(&self, account_id: &str) -> Result<Vec<Activity>>;

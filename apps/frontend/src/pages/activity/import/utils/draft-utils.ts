@@ -858,6 +858,7 @@ export function createDraftActivities(
     const draft: Partial<DraftActivity> = {
       rowIndex,
       rawRow: row,
+      bankReference: getColumnValue(row, ImportFormat.BANK_REFERENCE)?.trim() || undefined,
       activityDate,
       activityType,
       symbol,
@@ -948,6 +949,7 @@ export function draftToActivityImport(draft: DraftActivity): ActivityImport {
     lineNumber: draft.rowIndex + 1,
     isDraft: false,
     comment: draft.comment,
+    bankReference: draft.bankReference,
     forceImport: draft.forceImport ?? false,
     isExternal: isTransfer || isCredit ? draft.isExternal : undefined,
   };

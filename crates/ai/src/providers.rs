@@ -438,6 +438,9 @@ impl<E: AiEnvironment> ProviderService<E> {
             });
 
         let url = url.or_else(|| crate::provider_urls::bedrock_env_url(provider_id));
+        if provider_id == "bedrock" {
+            return url;
+        }
         // Validate URL to prevent panics in rig-core's HTTP client
         url.filter(|u| reqwest::Url::parse(u).is_ok())
     }

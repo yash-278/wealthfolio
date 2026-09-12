@@ -39,6 +39,8 @@ mod ai_providers;
 mod allocation_targets;
 mod alternative_assets;
 mod assets;
+mod capture_tokens;
+mod captures;
 #[cfg(any(feature = "connect-sync", feature = "device-sync"))]
 pub mod connect;
 mod custom_providers;
@@ -139,6 +141,8 @@ pub fn app_router(state: Arc<AppState>, config: &Config) -> Router {
     #[allow(unused_mut)]
     let mut protected_api = Router::new()
         .merge(accounts::router())
+        .merge(captures::router())
+        .merge(capture_tokens::router())
         .merge(portfolios::router())
         .merge(settings::router())
         .merge(data_exports::router())
@@ -234,6 +238,12 @@ pub fn app_router(state: Arc<AppState>, config: &Config) -> Router {
             get(oidc::oidc_callback).layer(GovernorLayer::new(oidc_governor)),
         )
         .merge(protected_api)
+        .merge(
+            captures::intake_router().layer(middleware::from_fn_with_state(
+                state.clone(),
+                capture_tokens::authenticate,
+            )),
+        )
         .with_state(state.clone());
 
     // Timeout wraps only the /api/v1 subtree: /mcp serves long-lived SSE

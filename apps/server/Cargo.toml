@@ -65,5 +65,7 @@ connect-sync = []
 device-sync = []
 
 [dev-dependencies]
+wealthfolio-ai = { workspace = true, features = ["test-utils"] }
+wealthfolio-core = { workspace = true, features = ["test-utils"] }
 reqwest = { workspace = true }
 tempfile = "3"

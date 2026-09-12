@@ -71,6 +71,7 @@ use wealthfolio_storage_sqlite::{
 };
 
 pub struct AppState {
+    pub capture_service: Arc<wealthfolio_core::captures::CaptureService>,
     /// Domain event sink for emitting events after mutations.
     /// Note: The sink is used by services injected at construction time; this field
     /// is kept for documentation and possible future access patterns.
@@ -881,7 +882,30 @@ pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
         None => None,
     };
 
+    let capture_service = Arc::new(wealthfolio_core::captures::CaptureService::new(
+        Arc::new(
+            wealthfolio_storage_sqlite::captures::SqliteCaptureRepository::new(
+                pool.clone(),
+                writer.clone(),
+            ),
+        ),
+        Arc::new(
+            wealthfolio_ai::capture_extractor::BedrockCaptureExtractor::new(
+                ai_provider_service.clone(),
+            ),
+        ),
+        Arc::new(
+            wealthfolio_spending::capture_categorization::CaptureCategorization::new(
+                cash_activity_service.clone(),
+                categorization_rules_service.clone(),
+            ),
+        ),
+        account_service.clone(),
+        activity_service.clone(),
+    ));
+    wealthfolio_core::captures::CaptureService::start_worker(&capture_service);
     let state = Arc::new(AppState {
+        capture_service,
         domain_event_sink,
         account_service,
         settings_service,

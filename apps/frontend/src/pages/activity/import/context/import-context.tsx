@@ -61,6 +61,7 @@ export interface DraftActivity {
   tax?: string | null;
   accountId: string;
   comment?: string;
+  bankReference?: string;
   subtype?: string;
   fxRate?: string | null;
   /** Whether a transfer or credit crosses the tracked-account boundary. */
@@ -591,6 +592,7 @@ export function ImportProvider({ children, initialAccountId }: ImportProviderPro
                 isValid: draft.status === "valid" || draft.status === "warning",
                 lineNumber: draft.rowIndex + 1,
                 comment: draft.comment,
+                bankReference: draft.bankReference,
                 fxRate: draft.fxRate,
                 subtype: draft.subtype,
               }) satisfies Partial<ActivityImport>,

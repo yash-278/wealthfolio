@@ -1,3 +1,6 @@
+import CaptureSettingsPanel from "@/features/quick-add/settings-panel";
+import ReviewPanel from "@/features/quick-add/review-panel";
+import QuickAddPage from "@/features/quick-add/quick-add-page";
 import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
@@ -99,6 +102,15 @@ export function AppRoutes() {
         <Route path="/" element={<AppLayout />}>
           <Route index element={<PortfolioPage />} />
           <Route path="dashboard" element={<PortfolioPage />} />
+          <Route
+            path="quick-add/review"
+            element={
+              <div className="mx-auto max-w-3xl p-6">
+                <ReviewPanel />
+              </div>
+            }
+          />
+          <Route path="quick-add" element={<QuickAddPage />} />
           <Route path="activities" element={<ActivityPage />} />
           <Route path="activities/manage" element={<ActivityManagerPage />} />
           <Route path="holdings" element={<HoldingsPage />} />
@@ -130,6 +142,7 @@ export function AppRoutes() {
             />
           ))}
           <Route path="settings" element={<SettingsLayout />}>
+            <Route path="quick-add" element={<CaptureSettingsPanel />} />
             <Route index element={<GeneralSettingsPage />} />
             <Route path="general" element={<GeneralSettingsPage />} />
             <Route path="accounts" element={<SettingsAccountsPage />} />
