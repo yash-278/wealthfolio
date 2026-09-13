@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { beforeAll, afterAll, expect, it, vi } from "vitest";
 import ReviewPanel from "./review-panel";
 const api = vi.hoisted(() => ({
   getCaptureReviews: vi.fn(),
@@ -71,9 +71,8 @@ it("categorizes the existing payment through category review", async () => {
   api.getCaptureReviews.mockResolvedValueOnce([capture]).mockResolvedValue([]);
   api.resolveCaptureReview.mockResolvedValue({ ...capture, reviews: [] });
   render(<ReviewPanel />);
-  fireEvent.change(await screen.findByLabelText("Category"), {
-    target: { value: "spending_categories:coffee" },
-  });
+  fireEvent.click(await screen.findByLabelText("Category"));
+  fireEvent.click(await screen.findByRole("option", { name: "Coffee Shops" }));
   fireEvent.click(screen.getByRole("button", { name: "Save category" }));
   expect(await screen.findByText("No items need review")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Save payment" })).not.toBeInTheDocument();
@@ -97,3 +96,17 @@ it("retries an extraction without submitting a new capture", async () => {
   expect(await screen.findByText("No items need review")).toBeInTheDocument();
   expect(api.retryCapture).toHaveBeenCalledWith("retry", 5);
 });
+
+// jsdom does not provide the layout APIs used by the shared command picker.
+beforeAll(() => {
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+  Element.prototype.scrollIntoView = vi.fn();
+});
+afterAll(() => vi.unstubAllGlobals());
