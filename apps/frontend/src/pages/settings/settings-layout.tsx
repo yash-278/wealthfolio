@@ -92,6 +92,12 @@ export default function SettingsLayout() {
         title: t("settings:nav.sections.connections"),
         items: [
           {
+            title: "Your server",
+            href: "server-sync",
+            subtitle: "Sync with your own Wealthfolio server",
+            icon: <Icons.CloudSync2 className="size-5" />,
+          },
+          {
             title: t("settings:nav.items.connect"),
             href: "connect",
             subtitle: t("settings:nav.subtitles.connect"),

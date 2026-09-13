@@ -8676,6 +8676,7 @@ dependencies = [
  "wealthfolio-device-sync",
  "wealthfolio-market-data",
  "wealthfolio-mcp",
+ "wealthfolio-server-sync",
  "wealthfolio-spending",
  "wealthfolio-storage-sqlite",
  "x25519-dalek",
@@ -8865,6 +8866,23 @@ dependencies = [
  "wealthfolio-market-data",
  "wealthfolio-mcp",
  "wealthfolio-spending",
+ "wealthfolio-storage-sqlite",
+]
+
+[[package]]
+name = "wealthfolio-server-sync"
+version = "3.9.0"
+dependencies = [
+ "argon2",
+ "axum 0.8.9",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "uuid",
+ "wealthfolio-core",
+ "wealthfolio-server",
  "wealthfolio-storage-sqlite",
 ]
 

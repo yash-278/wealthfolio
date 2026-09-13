@@ -61,6 +61,7 @@ mod performance;
 mod portfolio;
 mod portfolios;
 mod secrets;
+mod server_sync;
 mod settings;
 pub mod shared;
 mod spending;
@@ -142,6 +143,7 @@ pub fn app_router(state: Arc<AppState>, config: &Config) -> Router {
     let mut protected_api = Router::new()
         .merge(accounts::router())
         .merge(captures::router())
+        .merge(server_sync::router())
         .merge(capture_tokens::router())
         .merge(portfolios::router())
         .merge(settings::router())
@@ -172,9 +174,14 @@ pub fn app_router(state: Arc<AppState>, config: &Config) -> Router {
 
     #[cfg(feature = "device-sync")]
     {
-        protected_api = protected_api
-            .merge(device_sync::router())
-            .merge(sync_crypto::router());
+        protected_api = protected_api.merge(
+            device_sync::router()
+                .merge(sync_crypto::router())
+                .route_layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    server_sync::require_connect_sync_mode,
+                )),
+        );
     }
 
     #[cfg(any(feature = "connect-sync", feature = "device-sync"))]

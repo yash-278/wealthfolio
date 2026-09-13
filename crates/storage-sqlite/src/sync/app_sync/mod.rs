@@ -16,3 +16,9 @@ pub(crate) use outbox_projector::{flush_projected_outbox, ProjectedChange};
 pub use repository::{
     AppSyncRepository, OutboxWriteRequest, SyncLocalDataSummary, SyncTableRowCount,
 };
+
+pub use repository::server_sync::{
+    ServerSyncChange, ServerSyncHead, ServerSyncPage, ServerSyncPush, ServerSyncPushResult,
+};
+
+pub use repository::server_client::{QueuedServerChange, ServerClientStatus};
