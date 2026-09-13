@@ -225,14 +225,14 @@ export function SwipablePage({
   );
 
   return (
-    <Page className={cn("flex h-full flex-col", className)}>
+    <Page className={cn("flex h-full min-h-0 flex-col", className)}>
       <div
         data-ptr-content
-        className={cn("relative mx-auto flex w-full grow flex-col", contentClassName)}
+        className={cn("relative mx-auto flex min-h-0 w-full flex-1 flex-col", contentClassName)}
       >
         {isMobile ? (
           /* Mobile: SwipableView with navigation */
-          <div className="flex h-full flex-col md:hidden">
+          <div className="flex h-full min-h-0 flex-col md:hidden">
             {/* Mobile Navigation at top */}
             <div className="pt-safe flex shrink-0 flex-col gap-2 px-3 pb-2">
               <div
@@ -272,7 +272,7 @@ export function SwipablePage({
                   content: (
                     <div
                       className={cn(
-                        withPadding ? "p-2" : "pb-safe",
+                        withPadding && "p-2",
                         withMobileNavOffset && "pb-[var(--mobile-nav-total-offset)]",
                       )}
                     >
@@ -292,7 +292,7 @@ export function SwipablePage({
           </div>
         ) : (
           /* Desktop: Navigation at top center + content below */
-          <div className="hidden h-full flex-col md:flex">
+          <div className="hidden h-full min-h-0 flex-col md:flex">
             {/* Header with Navigation and Actions */}
             <div className="flex shrink-0 items-center justify-between gap-4 px-2 pb-3 pt-4 lg:px-4">
               <div className="titlebar-nudge flex items-center gap-3">

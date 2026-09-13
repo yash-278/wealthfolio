@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MobileNavigationContainer } from "@/pages/layouts/mobile-navigation-container";
+import { SwipablePage } from "@/components/page/swipable-page";
 import { createRoot } from "react-dom/client";
 import { MemoryRouter, Outlet, Route, Routes } from "react-router-dom";
 import { ApplicationShell, PageScrollContainer } from "@wealthfolio/ui";
@@ -31,6 +32,33 @@ function Fixture() {
                 )
               }
             >
+              <Route
+                path="/dashboard-layout"
+                element={
+                  <SwipablePage
+                    defaultView="investments"
+                    withPadding={false}
+                    withMobileNavOffset={false}
+                    views={[
+                      {
+                        value: "investments",
+                        label: "Investments",
+                        content: (
+                          <div className="bg-green-100 pb-[var(--mobile-nav-total-offset)]">
+                            <div className="h-[900px]">Synthetic dashboard</div>
+                            <button data-dashboard-end>Last dashboard action</button>
+                          </div>
+                        ),
+                      },
+                      {
+                        value: "net-worth",
+                        label: "Net worth",
+                        content: <div className="h-[1600px]">Longer inactive view</div>,
+                      },
+                    ]}
+                  />
+                }
+              />
               <Route path="/quick-add" element={<QuickAddPage />} />
               <Route path="/quick-add/review" element={<QuickAddReviewPage />} />
               <Route
