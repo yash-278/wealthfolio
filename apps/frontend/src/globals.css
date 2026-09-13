@@ -784,21 +784,11 @@ body.qr-scan-active .scan-hide-target {
     @apply overflow-x-hidden;
   }
 
-  /* Ensure all containers respect viewport width */
-  *,
-  *::before,
-  *::after {
-    max-width: 100vw;
-    box-sizing: border-box;
-  }
-
-  /* Smooth transitions for better feel */
   button,
   [role="button"] {
     transition: all 200ms ease-in-out;
   }
 
-  /* Prevent text from causing horizontal overflow */
   p,
   span,
   div {
@@ -806,32 +796,11 @@ body.qr-scan-active .scan-hide-target {
     overflow-wrap: break-word;
   }
 
-  /* Ensure grid and flex containers don't overflow */
-  .grid,
-  .flex {
-    max-width: 100%;
-    overflow-x: hidden;
-  }
-
-  /* assistant-ui thread needs native overflow behavior for sticky footer + viewport */
-  .aui-root,
-  .aui-root .flex,
-  .aui-root .grid {
-    overflow-x: visible;
-  }
-
-  /* The .flex/.grid rule above sets overflow-x, which per spec forces the other
-     axis to compute as `auto` — so every flex row becomes a scroll container and
-     paints an empty scrollbar track wherever the platform always shows them.
-     The spending card list is bare rows on the page background, where those
-     tracks are plainly visible, so it opts out the same way. */
-  .spending-activity-list .flex,
-  .spending-activity-list .grid {
-    overflow-x: visible;
-  }
-
-  .aui-thread-viewport {
-    overflow-x: auto;
+  /* Contain width at the page boundary. Making every flex/grid row a scroll
+     container traps touch scrolling and clips menus, focus rings and tables. */
+  [data-page-content] {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 }
 

@@ -99,9 +99,10 @@ export default function SettingsPanel() {
       setBusy(false);
     }
   }
-  const selectStyle = "border-input bg-background block w-full rounded-md border p-2";
+  const selectStyle =
+    "border-input bg-background block min-h-11 w-full min-w-0 rounded-md border p-2 text-base";
   return (
-    <section className="max-w-3xl space-y-6">
+    <section className="max-w-3xl space-y-6 [&_button]:min-h-11 [&_button]:whitespace-normal">
       <header>
         <h1 className="text-2xl font-semibold">Quick Add settings</h1>
         <p className="text-muted-foreground">
