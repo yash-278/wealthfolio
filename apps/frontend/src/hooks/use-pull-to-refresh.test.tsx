@@ -56,3 +56,30 @@ it("leaves text editing and an already scrolled page to native touch handling", 
   fireEvent.touchEnd(container);
   expect(refresh).not.toHaveBeenCalled();
 });
+
+it.each(["upward flick", "scrolled page", "nested scroller", "text editing"])(
+  "does not animate content or reset styles after %s",
+  (gesture) => {
+    const refresh = vi.fn().mockResolvedValue(undefined);
+    render(<Fixture refresh={refresh} />);
+    const container = screen.getByTestId("scroll");
+    const content = container.querySelector<HTMLElement>("[data-ptr-content]")!;
+    container.style.touchAction = "pan-y";
+    container.style.transform = "translateZ(0)";
+    container.style.transition = "opacity 100ms";
+    const before = container.style.cssText;
+    let target: HTMLElement = container;
+    if (gesture === "scrolled page") container.scrollTop = 100;
+    if (gesture === "nested scroller") {
+      content.scrollTop = 100;
+      target = content;
+    }
+    if (gesture === "text editing") target = screen.getByLabelText("Text");
+    fireEvent.touchStart(target, touches(300));
+    fireEvent.touchMove(target, touches(gesture === "upward flick" ? 100 : 500));
+    fireEvent.touchEnd(target);
+    expect(content.style.cssText).toBe("");
+    expect(container.style.cssText).toBe(before);
+    expect(refresh).not.toHaveBeenCalled();
+  },
+);

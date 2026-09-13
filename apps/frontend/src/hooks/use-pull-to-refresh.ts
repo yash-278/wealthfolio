@@ -173,12 +173,15 @@ export function usePullToRefresh({
     (e: React.TouchEvent) => {
       if (disabled || !containerRef.current) return;
 
+      // Native scrolling must finish without changing the scrolling layer.
+      // Only a gesture claimed by pull-to-refresh needs a return animation.
+      if (gestureRef.current !== "PULL") {
+        containerRef.current = null;
+        return;
+      }
+
       const target = containerRef.current;
       const deltaY = currentYRef.current - startYRef.current;
-
-      // Reset any container styles (defensive)
-      target.style.transform = "";
-      target.style.transition = "";
 
       // Trigger refresh if pulled far enough
       if (e.type !== "touchcancel" && deltaY > activationDistance && isPulling) {
@@ -192,8 +195,6 @@ export function usePullToRefresh({
       startYRef.current = 0;
       currentYRef.current = 0;
       gestureRef.current = "PENDING";
-      // Restore UA gesture handling
-      target.style.touchAction = "";
       containerRef.current = null;
       hasTriggeredHapticRef.current = false;
 
