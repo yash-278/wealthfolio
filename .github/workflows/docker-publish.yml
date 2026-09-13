@@ -108,5 +108,7 @@ jobs:
     needs: image
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/promote-railway.yml
+    secrets:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
     with:
       digest: ${{ needs.image.outputs.digest }}
