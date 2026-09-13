@@ -69,3 +69,15 @@ The first launch request was denied because the device was locked. After unlock,
 app. Physical launch is confirmed; phone/server pairing, Keychain persistence
 and end-to-end sync have not yet been tested. No server deployment was
 performed.
+
+## Quick Add web-to-phone regression
+
+The old activity source policy excluded QUICK_ADD from both the incremental
+outbox and initial snapshots. A paired phone could reach the server cursor while
+missing posted Quick Add transactions. The authenticated native-client
+regression failed with "Quick Add web transaction must arrive on an
+already-paired phone" before including that source. The coverage now checks
+creation, update, deletion and initial download. A separate storage test covers
+recovery of an omitted transaction into an existing pairing, unchanged ledger
+data and repeated repair. Quick Add receipt and review objects remain outside
+the sync dataset.

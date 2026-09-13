@@ -143,7 +143,7 @@ struct PortfolioAccountForeignKeyContext {
 }
 
 const USER_SYNCABLE_ACTIVITIES_FILTER_SQL: &str = "\
-    UPPER(COALESCE(source_system, '')) IN ('MANUAL', 'CSV') \
+    UPPER(COALESCE(source_system, '')) IN ('MANUAL', 'CSV', 'QUICK_ADD') \
     OR ((source_system IS NULL OR TRIM(source_system) = '') \
         AND (import_run_id IS NULL OR TRIM(import_run_id) = '') \
         AND (source_record_id IS NULL OR TRIM(source_record_id) = ''))";
@@ -151,7 +151,7 @@ const USER_SYNCABLE_ACTIVITIES_FILTER_SQL: &str = "\
 const ROWS_WITH_USER_SYNCABLE_ACTIVITY_FILTER_SQL: &str = "\
     activity_id IN (
         SELECT id FROM activities
-        WHERE UPPER(COALESCE(source_system, '')) IN ('MANUAL', 'CSV')
+        WHERE UPPER(COALESCE(source_system, '')) IN ('MANUAL', 'CSV', 'QUICK_ADD')
            OR ((source_system IS NULL OR TRIM(source_system) = '')
                AND (import_run_id IS NULL OR TRIM(import_run_id) = '')
                AND (source_record_id IS NULL OR TRIM(source_record_id) = ''))
@@ -7365,12 +7365,12 @@ mod tests {
             &mut conn,
             "manual-activity-sidecar",
             "acc-activity-sidecar",
-            "MANUAL",
+            "QUICK_ADD",
             None,
             None,
             0,
         )
-        .expect("insert manual activity");
+        .expect("insert Quick Add activity");
         insert_activity_for_snapshot_filter_test(
             &mut conn,
             "broker-activity-sidecar",

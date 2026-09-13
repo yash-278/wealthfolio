@@ -113,7 +113,10 @@ fn is_broker_origin_activity(activity: &ActivityDB) -> bool {
         .filter(|value| !value.is_empty())
         .map(|value| value.to_ascii_uppercase());
 
-    if matches!(source_system.as_deref(), Some("MANUAL" | "CSV")) {
+    if matches!(
+        source_system.as_deref(),
+        Some("MANUAL" | "CSV" | "QUICK_ADD")
+    ) {
         return false;
     }
 

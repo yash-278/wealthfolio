@@ -358,6 +358,7 @@ pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
         writer.clone(),
     ));
     let app_sync_repository = Arc::new(AppSyncRepository::new(pool.clone(), writer.clone()));
+    app_sync_repository.repair_quick_add_sync().await?;
     let quote_sync_state_repository =
         Arc::new(QuoteSyncStateRepository::new(pool.clone(), writer.clone()));
 

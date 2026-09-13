@@ -8,6 +8,8 @@ use std::{
     time::Duration,
 };
 use wealthfolio_core::{
+    accounts::AccountServiceTrait,
+    activities::ActivityRepositoryTrait,
     goals::{GoalRepositoryTrait, NewGoal},
     secrets::SecretStore,
 };
@@ -43,6 +45,7 @@ struct Device {
     _dir: tempfile::TempDir,
     repo: Arc<AppSyncRepository>,
     goals: GoalRepository,
+    activities: wealthfolio_storage_sqlite::activities::ActivityRepository,
     secrets: Arc<Secrets>,
 }
 impl Device {
@@ -55,7 +58,10 @@ impl Device {
         Self {
             _dir: dir,
             repo: Arc::new(AppSyncRepository::new(pool.clone(), writer.clone())),
-            goals: GoalRepository::new(pool, writer),
+            goals: GoalRepository::new(pool.clone(), writer.clone()),
+            activities: wealthfolio_storage_sqlite::activities::ActivityRepository::new(
+                pool, writer,
+            ),
             secrets: Arc::new(Secrets::default()),
         }
     }
@@ -126,6 +132,9 @@ async fn two_devices_sync_offline_edits_conflicts_pause_and_restart() {
         .await
         .unwrap()
         .id;
+    let cash_account = state.account_service.create_account(serde_json::from_value(
+        serde_json::json!({"name":"Synthetic cash", "accountType":"CASH", "currency":"USD", "isDefault":false, "isActive":true})
+    ).unwrap()).await.unwrap();
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
     let app = app_router(state.clone(), &config);
@@ -161,6 +170,57 @@ async fn two_devices_sync_offline_edits_conflicts_pause_and_restart() {
         state.goal_service.get_goal(&goal_id).unwrap().title,
         "Phone A edit"
     );
+    // Quick Add posts through this same activity service with its own source marker.
+    // A phone paired before the web write must receive it incrementally.
+    let quick_add = state.activity_service.create_activity(serde_json::from_value(
+        serde_json::json!({"accountId":cash_account.id, "activityType":"WITHDRAWAL",
+            "activityDate":"2026-09-13T12:00:00Z", "amount":"25", "currency":"USD",
+            "sourceSystem":"QUICK_ADD", "sourceRecordId":"synthetic-reference", "needsReview":false})
+    ).unwrap()).await.unwrap();
+    assert!(cb.sync().await.unwrap().error.is_none());
+    assert!(
+        b.activities.get_activity(&quick_add.id).is_ok(),
+        "Quick Add web transaction must arrive on an already-paired phone"
+    );
+    // A newly paired device must also include the same transaction in its snapshot.
+    let fresh = Device::new();
+    fresh
+        .client()
+        .connect(url.clone(), "test-password".into())
+        .await
+        .unwrap();
+    assert!(
+        fresh.activities.get_activity(&quick_add.id).is_ok(),
+        "Quick Add transaction must be included in initial download"
+    );
+    state
+        .activity_service
+        .update_activity(
+            serde_json::from_value(serde_json::json!({
+                "id":quick_add.id, "accountId":cash_account.id, "activityType":"WITHDRAWAL",
+                "activityDate":"2026-09-13T12:00:00Z", "amount":"30", "currency":"USD"
+            }))
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert!(cb.sync().await.unwrap().error.is_none());
+    assert_eq!(
+        b.activities
+            .get_activity(&quick_add.id)
+            .unwrap()
+            .amount
+            .unwrap()
+            .to_string(),
+        "30"
+    );
+    state
+        .activity_service
+        .delete_activity(quick_add.id.clone())
+        .await
+        .unwrap();
+    assert!(cb.sync().await.unwrap().error.is_none());
+    assert!(b.activities.get_activity(&quick_add.id).is_err());
     // Two offline edits based on the same server version must not silently overwrite one another.
     a.edit(&goal_id, "Winning server edit").await;
     b.edit(&goal_id, "Preserved offline edit").await;
