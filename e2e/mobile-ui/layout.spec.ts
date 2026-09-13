@@ -169,3 +169,37 @@ test("native touch scroll and a shortened viewport keep review controls reachabl
     .toBeLessThanOrEqual(304);
   await cdp.detach();
 });
+
+test("dashboard panes own scrolling without a blank outer-page tail", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto("/e2e/mobile-ui/?route=/dashboard-layout");
+  await page.getByText("Last dashboard action").waitFor();
+  const outer = page.locator("[data-page-scroll-container]");
+  const pane = page.locator("[data-virtual-scroll-parent]").first();
+  expect(await outer.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1);
+  expect(await pane.evaluate((el) => el.scrollHeight - el.clientHeight)).toBeGreaterThan(100);
+  await pane.evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+  });
+  await expect
+    .poll(async () => {
+      const end = await page.locator("[data-dashboard-end]").boundingBox();
+      const box = await pane.boundingBox();
+      return Math.round(box!.y + box!.height - end!.y - end!.height);
+    })
+    .toBe(76);
+});
+
+test("standalone page background follows light and dark themes", async ({ page }) => {
+  await page.goto("/e2e/mobile-ui/");
+  for (const dark of [false, true]) {
+    const colors = await page.evaluate((dark) => {
+      document.documentElement.classList.toggle("dark", dark);
+      return [document.documentElement, document.body, document.querySelector(".app-shell")!].map(
+        (el) => getComputedStyle(el).backgroundColor,
+      );
+    }, dark);
+    expect(colors[0]).toBe(colors[2]);
+    expect(colors[1]).toBe(colors[2]);
+  }
+});
