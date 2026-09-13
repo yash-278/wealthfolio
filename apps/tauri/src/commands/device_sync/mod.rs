@@ -43,6 +43,14 @@ fn cloud_api_base_url() -> Result<String, String> {
 }
 
 pub(super) async fn get_access_token(context: &Arc<ServiceContext>) -> Result<String, String> {
+    if context
+        .app_sync_repository()
+        .server_client_status()
+        .map_err(|_| "Could not read sync mode")?
+        .is_some()
+    {
+        return Err("This device is paired with your own server".into());
+    }
     context.connect_service().get_valid_access_token().await
 }
 

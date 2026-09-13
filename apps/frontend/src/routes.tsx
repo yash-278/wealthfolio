@@ -1,3 +1,5 @@
+import ServerSyncSettings from "@/features/server-sync/settings";
+import { ServerSyncRunner } from "@/features/server-sync/runner";
 import CaptureSettingsPanel from "@/features/quick-add/settings-panel";
 import { QuickAddReviewPage } from "@/features/quick-add/review-panel";
 import QuickAddPage from "@/features/quick-add/quick-add-page";
@@ -86,6 +88,7 @@ export function AppRoutes() {
   return (
     <BrowserRouter>
       <NavigationEventBridge />
+      <ServerSyncRunner />
       <Routes>
         {/* QR Scanner - No layout for fullscreen camera access */}
         {/* <Route path="/qr-scanner" element={<QRScannerPage />} /> */}
@@ -154,6 +157,7 @@ export function AppRoutes() {
             <Route path="securities" element={<AssetsPage />} />
             <Route path="taxonomies" element={<TaxonomiesPage />} />
             <Route path="connect" element={<ConnectSettingsPage />} />
+            <Route path="server-sync" element={<ServerSyncSettings />} />
             <Route path="ai-providers" element={<AiProvidersPage />} />
             <Route path="agent-access" element={<AgentAccessPage />} />
             <Route path="addons" element={<AddonSettingsPage />} />
