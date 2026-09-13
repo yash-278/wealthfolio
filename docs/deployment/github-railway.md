@@ -24,13 +24,16 @@ Deployment preserves the /data volume and existing environment variables. Build
 and test jobs do not receive production credentials.
 
 The `Promote Railway image` workflow accepts an immutable digest and uses the
-`production` environment secret `RAILWAY_TOKEN`. That token must be scoped to
-the Wealthfolio project and production environment. It is a deployment
-credential, not an application or AWS key. The workflow records the prior
-deployment, pulls the public image, selects it in Railway, and waits for a new
-successful deployment.
+repository secret `RAILWAY_TOKEN`. That token must be scoped to the
+Wealthfolio project and production environment. It is a deployment credential,
+not an application or AWS key. The workflow records the prior deployment, pulls
+the public image, selects it in Railway, and waits for a new successful
+deployment.
 
 Successful pushes to main automatically promote the exact tested image digest to
 Railway. Pull requests never deploy. The manual promotion workflow remains
-available for rollback. Deployment uses the production environment secret
-RAILWAY_TOKEN.
+available for rollback. The caller passes the repository secret RAILWAY_TOKEN
+explicitly to the reusable workflow. Keep a single copy at repository scope; a
+same-named environment secret can override it. The production environment still
+records deployment history. Never use an account-wide credential for this
+workflow.

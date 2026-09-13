@@ -115,7 +115,56 @@ pub(super) fn append_event(
     Ok(())
 }
 
+#[derive(QueryableByName)]
+struct RevisionCount {
+    #[diesel(sql_type = BigInt)]
+    count: i64,
+}
+
 impl AppSyncRepository {
+    /// Older builds omitted posted Quick Add rows from both snapshots and the journal.
+    /// Publish only records without a server revision so paired devices recover on
+    /// their next pull. Ledger rows and existing revisions are never overwritten.
+    pub async fn repair_quick_add_sync(&self) -> Result<usize> {
+        self.writer.exec(|conn| {
+            use crate::activities::ActivityDB;
+            use crate::schema::{activities, activity_taxonomy_assignments, spending_activity_events, spending_activity_splits};
+            use crate::spending::{activity_assignments::ActivityTaxonomyAssignmentDB,
+                activity_events::ActivityEventDB, activity_splits::ActivitySplitDB};
+            use crate::sync::outbox_request_for_model;
+            if head(conn)?.enabled != 1 { return Ok(0); }
+            let rows = activities::table
+                .filter(diesel::dsl::sql::<diesel::sql_types::Bool>("UPPER(TRIM(source_system)) = 'QUICK_ADD'"))
+                .select(ActivityDB::as_select()).load::<ActivityDB>(conn).map_err(StorageError::from)?;
+            let ids: Vec<_> = rows.iter().map(|row| row.id.clone()).collect();
+            let mut requests = Vec::new();
+            for row in rows { requests.push(outbox_request_for_model(&row, SyncOperation::Create)?); }
+            for row in activity_taxonomy_assignments::table.filter(activity_taxonomy_assignments::activity_id.eq_any(&ids))
+                .select(ActivityTaxonomyAssignmentDB::as_select()).load::<ActivityTaxonomyAssignmentDB>(conn).map_err(StorageError::from)? {
+                requests.push(outbox_request_for_model(&row, SyncOperation::Create)?);
+            }
+            for row in spending_activity_splits::table.filter(spending_activity_splits::activity_id.eq_any(&ids))
+                .select(ActivitySplitDB::as_select()).load::<ActivitySplitDB>(conn).map_err(StorageError::from)? {
+                requests.push(outbox_request_for_model(&row, SyncOperation::Create)?);
+            }
+            for row in spending_activity_events::table.filter(spending_activity_events::activity_id.eq_any(&ids))
+                .select(ActivityEventDB::as_select()).load::<ActivityEventDB>(conn).map_err(StorageError::from)? {
+                requests.push(outbox_request_for_model(&row, SyncOperation::Create)?);
+            }
+            let mut repaired = 0;
+            for request in requests {
+                let existing = diesel::sql_query("SELECT COUNT(*) AS count FROM server_sync_revisions WHERE entity = ? AND entity_id = ?")
+                    .bind::<Text,_>(enum_to_db(&request.entity)?).bind::<Text,_>(&request.entity_id)
+                    .get_result::<RevisionCount>(conn).map_err(StorageError::from)?;
+                if existing.count == 0 {
+                    insert_outbox_event(conn, request)?;
+                    repaired += 1;
+                }
+            }
+            Ok(repaired)
+        }).await
+    }
+
     /// Explicit opt-in. Existing data is supplied by the initial snapshot.
     pub async fn enable_server_sync(&self) -> Result<ServerSyncHead> {
         self.writer
@@ -315,6 +364,63 @@ mod tests {
             base_event_id: None,
             payload: json!({"id":id,"title":"Test goal","target_amount":100}),
         }
+    }
+
+    #[tokio::test]
+    async fn quick_add_repair_reaches_existing_clients_once_without_changing_ledger() {
+        let (dir, server) = setup();
+        server.writer.exec(|conn| {
+            diesel::sql_query("INSERT INTO accounts (id,name,account_type,currency,is_default,is_active) VALUES ('cash','Synthetic cash','cash','USD',0,1)")
+                .execute(conn).map_err(StorageError::from)?;
+            Ok(())
+        }).await.unwrap();
+        let head = server.enable_server_sync().await.unwrap();
+        let (snapshot, snapshot_head) = server.export_server_sync_snapshot().await.unwrap();
+        let path = dir.path().join("initial.db");
+        std::fs::write(&path, snapshot).unwrap();
+        let (_phone_dir, phone) = setup();
+        phone
+            .bootstrap_server_client(
+                path.to_string_lossy().into_owned(),
+                "https://example.com".into(),
+                snapshot_head.server_id,
+                snapshot_head.cursor,
+            )
+            .await
+            .unwrap();
+        // Reproduce the old build's ledger write with no corresponding sync event.
+        server.writer.exec(|conn| {
+            diesel::sql_query("INSERT INTO activities (id,account_id,activity_type,status,activity_date,amount,currency,source_system,source_record_id,needs_review,created_at,updated_at) VALUES ('missed','cash','WITHDRAWAL','POSTED','2026-09-10T12:00:00Z','25','USD','QUICK_ADD','synthetic-reference',0,'2026-09-10T12:00:00Z','2026-09-10T12:00:00Z')")
+                .execute(conn).map_err(StorageError::from)?;
+            Ok(())
+        }).await.unwrap();
+        assert_eq!(server.server_sync_head().unwrap().cursor, head.cursor);
+        assert_eq!(server.repair_quick_add_sync().await.unwrap(), 1);
+        let repaired_head = server.server_sync_head().unwrap();
+        assert_eq!(server.repair_quick_add_sync().await.unwrap(), 0);
+        assert_eq!(
+            server.server_sync_head().unwrap().cursor,
+            repaired_head.cursor
+        );
+        let page = server
+            .pull_server_sync(&head.server_id, head.cursor, 100)
+            .unwrap();
+        assert_eq!(page.changes.len(), 1);
+        phone.apply_server_page(head.cursor, page).await.unwrap();
+        use crate::activities::ActivityDB;
+        let read = |repo: &AppSyncRepository| {
+            let mut conn = get_connection(&repo.pool).unwrap();
+            crate::schema::activities::table
+                .find("missed")
+                .select(ActivityDB::as_select())
+                .first::<ActivityDB>(&mut conn)
+                .unwrap()
+        };
+        assert_eq!(
+            serde_json::to_value(read(&phone)).unwrap(),
+            serde_json::to_value(read(&server)).unwrap()
+        );
+        assert_eq!(read(&server).amount.as_deref(), Some("25"));
     }
 
     #[tokio::test]

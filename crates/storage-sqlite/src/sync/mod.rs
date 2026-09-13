@@ -54,7 +54,7 @@ pub fn should_sync_outbox_for_activity(
         .filter(|value| !value.is_empty())
         .map(|value| value.to_ascii_uppercase());
     if let Some(source) = normalized_source {
-        return matches!(source.as_str(), "MANUAL" | "CSV");
+        return matches!(source.as_str(), "MANUAL" | "CSV" | "QUICK_ADD");
     }
 
     import_run_id.is_none_or(|value| value.trim().is_empty())
@@ -138,6 +138,12 @@ mod tests {
             false,
             None,
             None
+        ));
+        assert!(should_sync_outbox_for_activity(
+            Some("QUICK_ADD"),
+            false,
+            None,
+            Some("synthetic-bank-reference")
         ));
         assert!(should_sync_outbox_for_activity(None, false, None, None));
         assert!(!should_sync_outbox_for_activity(

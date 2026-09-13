@@ -17,11 +17,12 @@ revision it was based on; a stale revision produces a conflict. The server never
 uses a phone's clock to decide which edit wins.
 
 This stage reuses the existing user-managed sync dataset and replay adapters.
-That includes manual/CSV financial activities, accounts, assets, goals, budgets,
-spending configuration and the other entities in `APP_SYNC_TABLES`, subject to
-its existing export filters. It is not a complete database mirror. Broker-owned
-rows, provider-fetched quotes and derived calculations retain the upstream sync
-filters. Do not advertise full brokerage parity until those paths are covered.
+That includes manual/CSV/Quick Add financial activities, accounts, assets,
+goals, budgets, spending configuration and the other entities in
+`APP_SYNC_TABLES`, subject to its existing export filters. It is not a complete
+database mirror. Broker-owned rows, provider-fetched quotes and derived
+calculations retain the upstream sync filters. Do not advertise full brokerage
+parity until those paths are covered.
 
 Uploads currently support entities with a single-column storage mapping. These
 four special entities are rejected before a mutation:
@@ -30,10 +31,13 @@ four special entities are rejected before a mutation:
 downloads because web-side edits use the existing outbox. Their upload adapters
 need a later implementation.
 
-Quick Add's posted manual activities participate through the existing activity
-outbox. Capture receipts, unresolved candidates, source text, configuration and
-correction rules need separate sync coverage. AI provider credentials and owner
-sessions are not part of the downloaded snapshot.
+Quick Add's posted activities participate through the activity outbox, including
+updates, deletions and their spending assignments. On server startup, previously
+skipped Quick Add records without a server revision are added to the change feed
+once so existing paired devices recover them without a new snapshot. Capture
+receipts, unresolved candidates, source text, configuration and correction rules
+need separate sync coverage. AI provider credentials and owner sessions are not
+part of the downloaded snapshot.
 
 ## Authentication and opt-in
 

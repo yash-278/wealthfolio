@@ -52,7 +52,10 @@ fn is_broker_origin_activity(
         .filter(|value| !value.is_empty())
         .map(|value| value.to_ascii_uppercase());
 
-    if matches!(normalized_source.as_deref(), Some("MANUAL" | "CSV")) {
+    if matches!(
+        normalized_source.as_deref(),
+        Some("MANUAL" | "CSV" | "QUICK_ADD")
+    ) {
         return false;
     }
 

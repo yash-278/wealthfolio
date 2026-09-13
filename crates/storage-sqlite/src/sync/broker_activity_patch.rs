@@ -78,7 +78,7 @@ pub(crate) fn broker_activity_identity(
     source_record_id: Option<&str>,
 ) -> Option<BrokerActivityIdentity> {
     let source_system = normalize_source_system(source_system?)?;
-    if matches!(source_system.as_str(), "MANUAL" | "CSV") {
+    if matches!(source_system.as_str(), "MANUAL" | "CSV" | "QUICK_ADD") {
         return None;
     }
 
