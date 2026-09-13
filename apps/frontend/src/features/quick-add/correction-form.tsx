@@ -68,7 +68,8 @@ export default function CorrectionForm({
     for (const key of Object.keys(next) as (keyof CaptureFields)[])
       form.setValue(key, next[key], { shouldDirty: true });
   };
-  const selectStyle = "border-input bg-background block w-full rounded-md border p-2";
+  const selectStyle =
+    "border-input bg-background block min-h-11 w-full min-w-0 rounded-md border p-2 text-base";
   return (
     <form onSubmit={form.handleSubmit(save)}>
       <fieldset disabled={busy} className="grid gap-3 sm:grid-cols-2">

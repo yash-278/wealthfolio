@@ -36,7 +36,7 @@ const AppLayoutContent = () => {
     (/ipad/i.test(window.navigator.userAgent) ||
       (/macintosh/i.test(window.navigator.userAgent) && window.navigator.maxTouchPoints > 1));
   const { isLaunchBar, isFocusMode } = useNavigationMode();
-  const shouldUseMobileNavigation = isIPad ? false : isMobile || isMobileViewport;
+  const shouldUseMobileNavigation = isMobileViewport || (isMobile && !isIPad);
   const shouldUseBottomNavigation = shouldUseMobileNavigation || (isLaunchBar && !isFocusMode);
   const isDesktopFocusMode = !shouldUseMobileNavigation && isFocusMode;
   const hasSidebar = !shouldUseBottomNavigation && !isDesktopFocusMode;
@@ -88,7 +88,7 @@ const AppLayoutContent = () => {
   return (
     <ErrorBoundary>
       <ApplicationShell
-        className="app-shell h-screen overflow-x-hidden"
+        className="app-shell h-dvh min-h-0 overflow-hidden"
         style={{
           ...(launchBarHeight ? { ["--mobile-nav-ui-height" as string]: launchBarHeight } : {}),
           ...(titleBarNudge ? { ["--titlebar-nudge" as string]: titleBarNudge } : {}),
@@ -103,15 +103,17 @@ const AppLayoutContent = () => {
 
         <div
           className={cn(
-            "relative flex min-h-0 w-full max-w-full flex-1 overflow-x-hidden",
+            "relative flex min-h-0 w-full min-w-0 max-w-full flex-1 overflow-x-hidden",
             shouldUseMobileNavigation ? "overscroll-contain" : undefined,
           )}
         >
-          <main className="relative flex min-h-0 w-full max-w-full flex-1 flex-col overflow-x-hidden">
-            <div
-              data-tauri-drag-region="true"
-              className="draggable pointer-events-auto absolute inset-x-0 top-0 z-50 h-6 cursor-grab opacity-0"
-            ></div>
+          <main className="relative flex min-h-0 w-full min-w-0 max-w-full flex-1 flex-col overflow-x-hidden">
+            {isTauri && (
+              <div
+                data-tauri-drag-region="true"
+                className="draggable pointer-events-auto absolute inset-x-0 top-0 z-50 h-6 cursor-grab opacity-0"
+              ></div>
+            )}
             {shouldUseMobileNavigation ? (
               <MobileNavigationContainer key={pageScrollKey} />
             ) : (

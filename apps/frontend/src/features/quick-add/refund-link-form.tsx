@@ -61,7 +61,7 @@ export default function RefundLinkForm({
         <select
           {...form.register("originalId")}
           disabled={loading || busy}
-          className="border-input bg-background block w-full rounded-md border p-2"
+          className="border-input bg-background block min-h-11 w-full min-w-0 rounded-md border p-2 text-base"
         >
           <option value="">Choose payment</option>
           {rows.map((row) => (

@@ -1,3 +1,4 @@
+import { MemoryRouter } from "react-router-dom";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import QuickAddPage from "./quick-add-page";
@@ -27,7 +28,11 @@ it("preserves unconfirmed text and distinguishes saved payments from unsaved rev
     ],
     reviews: [{ id: "review-1", reason: "account_required", status: "open", activityId: null }],
   });
-  render(<QuickAddPage />);
+  render(
+    <MemoryRouter>
+      <QuickAddPage />
+    </MemoryRouter>,
+  );
   fireEvent.change(screen.getByLabelText("Transaction text"), {
     target: { value: "Paid for coffee and another unclear payment" },
   });

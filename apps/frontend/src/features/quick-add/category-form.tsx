@@ -30,7 +30,7 @@ export default function CategoryForm({
         Category
         <select
           {...form.register("category")}
-          className="border-input bg-background block w-full rounded-md border p-2"
+          className="border-input bg-background block min-h-11 w-full min-w-0 rounded-md border p-2 text-base"
         >
           <option value="">Choose category</option>
           {categories.map((c) => (

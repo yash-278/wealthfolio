@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import { Page, PageContent, PageHeader } from "@wealthfolio/ui";
 import RefundLinkForm from "./refund-link-form";
 import CategoryForm from "./category-form";
 import { useEffect, useState } from "react";
@@ -120,11 +122,14 @@ export default function ReviewPanel() {
       .map((review) => ({ capture, review })),
   );
   return (
-    <section aria-label="Review" className="space-y-4">
+    <section
+      aria-label="Review"
+      className="space-y-4 [&_button]:min-h-11 [&_button]:max-w-full [&_button]:whitespace-normal"
+    >
       <label>
         Review type
         <select
-          className="border-input bg-background block w-full rounded-md border p-2"
+          className="border-input bg-background block min-h-11 w-full min-w-0 rounded-md border p-2 text-base"
           value={reason}
           disabled={busy || loading}
           onChange={(e) => {
@@ -154,7 +159,7 @@ export default function ReviewPanel() {
           ))}
         </select>
       </label>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button
           variant="outline"
           disabled={busy || loading || page === 0}
@@ -272,7 +277,7 @@ export default function ReviewPanel() {
               </Button>
             </>
           )}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {!capture.candidates.length &&
               ["configuration_required", "budget_exhausted", "extraction_failed"].includes(
                 review.reason,
@@ -296,5 +301,21 @@ export default function ReviewPanel() {
         </article>
       ))}
     </section>
+  );
+}
+
+export function QuickAddReviewPage() {
+  return (
+    <Page>
+      <PageHeader heading="Quick Add review" dragRegion={false} />
+      <PageContent className="px-4 md:px-6">
+        <div className="mx-auto max-w-3xl space-y-6">
+          <Button asChild variant="outline" className="min-h-11">
+            <Link to="/quick-add">Add a transaction</Link>
+          </Button>
+          <ReviewPanel />
+        </div>
+      </PageContent>
+    </Page>
   );
 }
