@@ -246,3 +246,44 @@ for (const width of [320, 390, 1440]) {
     );
   });
 }
+
+test("a native flick continues scrolling after finger release", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "CDP dispatches native touch input in Chromium");
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto("/e2e/mobile-ui/?route=/dashboard-layout");
+  const pane = page.locator("[data-virtual-scroll-parent]").first();
+  await pane
+    .locator(":scope > div")
+    .first()
+    .evaluate((el) => {
+      el.style.minHeight = "4000px";
+    });
+  const content = page.locator("[data-ptr-content]").first();
+  await content.evaluate((el) => {
+    el.setAttribute("data-style-changes", "0");
+    new MutationObserver((records) => {
+      el.setAttribute(
+        "data-style-changes",
+        String(Number(el.getAttribute("data-style-changes")) + records.length),
+      );
+    }).observe(el, { attributes: true, attributeFilter: ["style"] });
+  });
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: true });
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [{ x: 200, y: 600 }],
+  });
+  for (let y = 570; y >= 330; y -= 30) {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: 200, y }] });
+    await page.waitForTimeout(16);
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  const released = await pane.evaluate((el) => el.scrollTop);
+  await page.waitForTimeout(300);
+  const coasted = await pane.evaluate((el) => el.scrollTop);
+  expect(released).toBeGreaterThan(50);
+  expect(coasted - released).toBeGreaterThan(20);
+  await expect(content).toHaveAttribute("data-style-changes", "0");
+  await cdp.detach();
+});
