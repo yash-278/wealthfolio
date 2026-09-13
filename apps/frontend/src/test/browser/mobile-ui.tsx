@@ -6,6 +6,7 @@ import { MemoryRouter, Outlet, Route, Routes } from "react-router-dom";
 import { ApplicationShell, PageScrollContainer } from "@wealthfolio/ui";
 import QuickAddPage from "@/features/quick-add/quick-add-page";
 import { QuickAddReviewPage } from "@/features/quick-add/review-panel";
+import CategoryForm from "@/features/quick-add/category-form";
 import CaptureSettingsPanel from "@/features/quick-add/settings-panel";
 import "@/globals.css";
 
@@ -57,6 +58,42 @@ function Fixture() {
                       },
                     ]}
                   />
+                }
+              />
+              <Route
+                path="/category-picker"
+                element={
+                  <div className="p-4">
+                    <CategoryForm
+                      busy={false}
+                      categories={[
+                        {
+                          taxonomyId: "spending_categories",
+                          categoryId: "coffee",
+                          name: "Coffee",
+                          path: "Food / Coffee",
+                        },
+                        {
+                          taxonomyId: "income_sources",
+                          categoryId: "interest",
+                          name: "Interest",
+                          path: "Investments / Interest",
+                        },
+                        {
+                          taxonomyId: "savings_categories",
+                          categoryId: "fund",
+                          name: "Emergency fund",
+                          path: "Reserves / Emergency fund",
+                        },
+                      ]}
+                      save={async (taxonomyId, categoryId) => {
+                        document.body.dataset.savedCategory = JSON.stringify([
+                          taxonomyId,
+                          categoryId,
+                        ]);
+                      }}
+                    />
+                  </div>
                 }
               />
               <Route path="/quick-add" element={<QuickAddPage />} />

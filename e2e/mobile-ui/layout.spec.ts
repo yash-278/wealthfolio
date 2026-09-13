@@ -203,3 +203,46 @@ test("standalone page background follows light and dark themes", async ({ page }
     expect(colors[1]).toBe(colors[2]);
   }
 });
+
+for (const width of [320, 390, 1440]) {
+  test(`category picker groups, searches and confirms at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto("/e2e/mobile-ui/?route=/category-picker");
+    await page.getByLabel("Category", { exact: true }).click();
+    const picker = page.getByRole("dialog");
+    await expect(picker).toBeVisible();
+    for (const group of ["Expenses", "Income", "Savings"])
+      await expect(picker.getByText(group, { exact: true })).toBeVisible();
+    await expect
+      .poll(async () => {
+        const box = await picker.boundingBox();
+        return box!.y + box!.height;
+      })
+      .toBeLessThanOrEqual(801);
+    await expect(picker.getByRole("combobox")).toBeInViewport();
+    await page.screenshot({
+      path: test.info().outputPath("category-groups.png"),
+      animations: "disabled",
+    });
+    const bounds = await picker.boundingBox();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width + 1);
+    await picker.getByRole("combobox").fill("Food");
+    await expect(picker.getByRole("option", { name: /Coffee/ })).toBeVisible();
+    await expect(picker.getByRole("option", { name: /Interest/ })).toHaveCount(0);
+    await page.screenshot({
+      path: test.info().outputPath("category-search.png"),
+      animations: "disabled",
+    });
+    await picker.getByRole("combobox").press("ArrowDown");
+    await picker.getByRole("combobox").press("Enter");
+    await expect(picker).toHaveCount(0);
+    await expect(page.getByLabel("Category", { exact: true })).toBeFocused();
+    expect(await page.locator("body").getAttribute("data-saved-category")).toBeNull();
+    await page.getByRole("button", { name: "Save category" }).click();
+    await expect(page.locator("body")).toHaveAttribute(
+      "data-saved-category",
+      JSON.stringify(["spending_categories", "coffee"]),
+    );
+  });
+}
