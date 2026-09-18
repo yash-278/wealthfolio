@@ -47,6 +47,16 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.yashkadam.wealthfolio.native.tests
         GENERATE_INFOPLIST_FILE: YES
+  WealthfolioNativeUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: WealthfolioNative
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashkadam.wealthfolio.native.uitests
+        GENERATE_INFOPLIST_FILE: YES
 schemes:
   WealthfolioNative:
     build:
@@ -54,3 +64,9 @@ schemes:
         WealthfolioNative: all
     test:
       targets: [WealthfolioNativeTests]
+  WealthfolioNativeUITests:
+    build:
+      targets:
+        WealthfolioNative: all
+    test:
+      targets: [WealthfolioNativeUITests]

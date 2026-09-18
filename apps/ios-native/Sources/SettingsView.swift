@@ -1,15 +1,42 @@
 import SwiftUI
 
 struct MoreView: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var scheme
+    private var palette: InsightPalette { InsightPalette(scheme: scheme) }
+    private var syncSummary: String {
+        guard model.connected else { return "Stored on this device" }
+        if model.sync["connection"]["paused"].flag { return "Sync paused" }
+        let pending = model.sync["connection"]["pending"].text
+        return pending.isEmpty || pending == "0" ? "Connected" : "Connected · \(pending) pending"
+    }
     var body: some View {
         List {
-            NavigationLink { QuickAddView() } label: { Label("Quick Add", systemImage: "plus.circle") }
-            NavigationLink { HoldingsView() } label: { Label("Holdings", systemImage: "briefcase") }
-            NavigationLink { NetWorthView() } label: { Label("Net worth", systemImage: "wallet.bifold") }
-            NavigationLink { SpendingView() } label: { Label("Spending", systemImage: "banknote") }
-            NavigationLink { GoalsView() } label: { Label("Goals", systemImage: "target") }
-            NavigationLink { SettingsView() } label: { Label("Settings", systemImage: "gearshape") }
-        }.navigationTitle("More")
+            Section {
+                row("Quick Add", symbol: "plus.circle", tint: palette.accent) { QuickAddView() }
+            }.surfaceRows()
+            Section("Portfolio") {
+                row("Holdings", symbol: "briefcase", tint: palette.accent) { HoldingsView() }
+                row("Net worth", symbol: "wallet.bifold", tint: palette.blue) { NetWorthView() }
+                row("Spending", symbol: "creditcard", tint: palette.accent) { SpendingView() }
+                row("Goals", symbol: "target", tint: palette.blue) { GoalsView() }
+            }.surfaceRows()
+            Section("App") {
+                row("Your server", detail: syncSummary, symbol: "arrow.triangle.2.circlepath", tint: palette.accent) { ServerSyncView() }
+                row("Settings", symbol: "gearshape", tint: palette.blue) { SettingsView() }
+            }.surfaceRows()
+        }.listStyle(.insetGrouped).themedForm().leadingPageTitle("More")
+    }
+    private func row<Destination: View>(_ title: String, detail: String = "", symbol: String, tint: Color, @ViewBuilder destination: @escaping () -> Destination) -> some View {
+        NavigationLink(destination: destination) {
+            HStack(spacing: 12) {
+                IconTile(symbol: symbol, tint: tint)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title).font(.body.weight(.medium))
+                    if !detail.isEmpty { Text(detail).font(.caption).foregroundStyle(.secondary) }
+                }
+            }.padding(.vertical, 2)
+        }
     }
 }
 
@@ -22,69 +49,89 @@ struct SettingsView: View {
         Form {
             Section {
                 NavigationLink { ServerSyncView() } label: { Label("Your server", systemImage: "arrow.triangle.2.circlepath") }
-                Text("Your portfolio is stored on this device. Server synchronization is optional.").font(.footnote).foregroundStyle(.secondary)
-            }
+            } footer: { Text("Your portfolio is stored on this device. Server synchronization is optional.") }.surfaceRows()
             Section("Portfolio") {
-                TextField("Base currency", text: $currency).textInputAutocapitalization(.characters)
-                Picker("Time zone", selection: $timezone) { ForEach(TimeZone.knownTimeZoneIdentifiers, id: \.self) { Text($0).tag($0) } }
+                LabeledContent("Base currency") { TextField("USD", text: $currency).multilineTextAlignment(.trailing).textInputAutocapitalization(.characters).autocorrectionDisabled() }
+                Picker("Time zone", selection: $timezone) { ForEach(timeZoneChoices(including: timezone), id: \.self) { Text($0).tag($0) } }
+                Toggle("Hide balances", isOn: Binding(get: { model.hideBalances }, set: { model.hideBalances = $0 }))
                 Button("Save preferences") {
                     Task {
                         saving = true; defer { saving = false }
                         do { _ = try await model.mutate("/api/v1/settings", method: "PUT", body: .strings(["baseCurrency": currency.uppercased(), "timezone": timezone])) }
                         catch { model.error = error.localizedDescription }
                     }
-                }.disabled(saving)
-            }
-            Section("Data") { NavigationLink("Export CSV") { ExportView() } }
-            Section("Assistant") { NavigationLink("AI providers") { AIProvidersView() } }
-        }.navigationTitle("Settings")
+                }.disabled(saving || currency.isEmpty)
+            }.surfaceRows()
+            Section("Data") { NavigationLink { ExportView() } label: { Label("Export CSV", systemImage: "square.and.arrow.up") } }.surfaceRows()
+            Section("Assistant") { NavigationLink { AIProvidersView() } label: { Label("AI providers", systemImage: "sparkles") } }.surfaceRows()
+        }.themedForm().leadingPageTitle("Settings")
         .onAppear { currency = model.currency; timezone = model.settings["timezone"].text }
     }
 }
 
 struct ServerSyncView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var scheme
+    private var palette: InsightPalette { InsightPalette(scheme: scheme) }
     @State private var endpoint = ""
     @State private var password = ""
     @State private var working = false
     @State private var error: String?
     @State private var accepting = false
+    private var paused: Bool { model.sync["connection"]["paused"].flag }
+    private var lastSync: String {
+        let text = model.sync["connection"]["lastSync"].text
+        if text.isEmpty { return "Never" }
+        return parseActivityDate(text)?.formatted(.relative(presentation: .named)) ?? text
+    }
     var body: some View {
         Form {
-            Section("Connection") {
+            Section {
+                HStack(spacing: 12) {
+                    IconTile(symbol: model.connected ? (paused ? "pause.circle" : "checkmark.icloud") : "iphone", tint: palette.accent)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(model.connected ? (paused ? "Sync paused" : "Connected") : "Stored on this device").font(.body.weight(.medium))
+                        Text(model.connected ? model.sync["connection"]["endpoint"].text : "Server synchronization is optional.")
+                            .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                    }
+                    Spacer()
+                    if working || model.syncing { ProgressView().controlSize(.small) }
+                }.padding(.vertical, 2)
+            }.surfaceRows()
+            Section {
                 TextField("https://your-server", text: $endpoint).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                     .disabled(model.connected)
                 SecureField("Website password", text: $password)
                 Button(model.connected ? "Sign in again" : "Connect and download") { Task { await connect() } }
                     .disabled(working || endpoint.isEmpty || password.isEmpty)
-            }
+            } header: { Text("Connection") } footer: {
+                if !model.connected { Text("Connect before creating local accounts to download your existing portfolio. Existing local records are never overwritten to pair a server.") }
+            }.surfaceRows()
             if model.connected {
                 Section("Synchronization") {
                     LabeledContent("Pending changes", value: model.sync["connection"]["pending"].text)
-                    LabeledContent("Last sync", value: model.sync["connection"]["lastSync"].text)
+                    LabeledContent("Last sync", value: lastSync)
                     Button("Sync now", systemImage: "arrow.triangle.2.circlepath") { Task { await model.synchronize() } }.disabled(model.syncing)
-                    Button(model.sync["connection"]["paused"].flag ? "Resume sync" : "Pause sync") {
+                    Button(paused ? "Resume sync" : "Pause sync", systemImage: paused ? "play" : "pause") {
                         Task {
-                            do { model.sync = try await model.engine.request("/native/sync/pause", method: "POST", body: .object(["paused": .bool(!model.sync["connection"]["paused"].flag)])) }
+                            do { model.sync = try await model.engine.request("/native/sync/pause", method: "POST", body: .object(["paused": .bool(!paused)])) }
                             catch { self.error = error.localizedDescription }
                         }
                     }
-                }
-            } else {
-                Section { Text("Connect before creating local accounts to download your existing portfolio. Existing local records are never overwritten to pair a server.") }
+                }.surfaceRows()
             }
             if model.sync["conflict"] != .null {
-                Section("Change needs review") {
-                    Text(model.sync["conflict"]["label"].text)
-                    Text("The same record changed on this device and on the server. Accepting the server version discards the conflicting local edit.").font(.footnote)
+                Section {
+                    Label(model.sync["conflict"]["label"].text, systemImage: "exclamationmark.triangle").foregroundStyle(.orange)
                     Button("Use server version", role: .destructive) { accepting = true }
-                }
+                } header: { Text("Change needs review") } footer: {
+                    Text("The same record changed on this device and on the server. Accepting the server version discards the conflicting local edit.")
+                }.surfaceRows()
             }
-            if let error { Section { Text(error).foregroundStyle(.red) } }
-            if let syncError = model.syncError { Section { Text(syncError).foregroundStyle(.secondary) } }
-            if !model.sync["error"].text.isEmpty { Section { Text(model.sync["error"].text).foregroundStyle(.secondary) } }
-            if working { ProgressView("Connecting…") }
-        }.navigationTitle("Your server")
+            if let error { Section { Label(error, systemImage: "exclamationmark.circle").font(.subheadline).foregroundStyle(.red) }.surfaceRows() }
+            if let syncError = model.syncError { Section { Text(syncError).font(.subheadline).foregroundStyle(.secondary) }.surfaceRows() }
+            if !model.sync["error"].text.isEmpty { Section { Text(model.sync["error"].text).font(.subheadline).foregroundStyle(.secondary) }.surfaceRows() }
+        }.themedForm().leadingPageTitle("Your server")
         .task {
             do { model.sync = try await model.engine.request("/native/sync/status"); endpoint = model.sync["connection"]["endpoint"].text }
             catch { self.error = error.localizedDescription }
@@ -110,18 +157,35 @@ struct ServerSyncView: View {
 
 struct AIProvidersView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.colorScheme) private var scheme
+    private var palette: InsightPalette { InsightPalette(scheme: scheme) }
     @State private var providers: [Record] = []
     @State private var error: String?
     var body: some View {
         List {
-            if let error { Text(error).foregroundStyle(.red) }
-            ForEach(providers) { provider in
-                NavigationLink(provider["name"].text.isEmpty ? provider.id : provider["name"].text) { AIProviderEditor(provider: provider) }
-            }
-        }.navigationTitle("AI providers").task {
-            do { let data = try await model.engine.request("/api/v1/ai/providers"); providers = data["providers"].values.map(Record.init) }
+            if let error { Section { Label(error, systemImage: "exclamationmark.circle").font(.subheadline).foregroundStyle(.red) }.surfaceRows() }
+            Section {
+                ForEach(providers) { provider in
+                    NavigationLink { AIProviderEditor(provider: provider) } label: {
+                        HStack(spacing: 12) {
+                            IconTile(symbol: provider["enabled"].flag ? "sparkles" : "circle.dashed", tint: provider["enabled"].flag ? palette.accent : .secondary)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(provider["name"].text.isEmpty ? provider.id : provider["name"].text).font(.body.weight(.medium))
+                                Text(status(provider)).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }.padding(.vertical, 2)
+                    }
+                }
+            } footer: { Text("API keys are stored in the Keychain on this device.") }.surfaceRows()
+        }.listStyle(.insetGrouped).themedForm().leadingPageTitle("AI providers").task {
+            do { let data = try await model.engine.request("/api/v1/ai/providers"); providers = data["providers"].values.map(Record.init); error = nil }
             catch { self.error = error.localizedDescription }
         }
+    }
+    private func status(_ provider: Record) -> String {
+        if provider["isDefault"].flag { return "Default" }
+        if provider["enabled"].flag { return "Enabled" }
+        return provider["hasApiKey"].flag ? "Key saved · off" : "Not set up"
     }
 }
 
@@ -135,30 +199,33 @@ struct AIProviderEditor: View {
     @State private var message: String?
     var body: some View {
         Form {
-            Toggle("Enabled", isOn: $enabled)
-            TextField("Model", text: $selectedModel).textInputAutocapitalization(.never).autocorrectionDisabled()
-            TextField("Custom endpoint (optional)", text: $customURL).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-            SecureField("API key", text: $key)
-            Button("Save provider") {
-                Task {
-                    do {
-                        if !key.isEmpty {
-                            _ = try await model.engine.request("/api/v1/secrets", method: "POST", body: .strings(["secretKey": "ai_" + provider.id, "secret": key]))
-                            key = ""
-                        }
-                        _ = try await model.engine.request("/api/v1/ai/providers/settings", method: "PUT", body: .object([
-                            "providerId": .string(provider.id), "enabled": .bool(enabled), "selectedModel": .string(selectedModel),
-                            "customUrl": customURL.isEmpty ? .null : .string(customURL)]))
-                        message = "Provider settings saved."
-                    } catch { message = error.localizedDescription }
+            Section { Toggle("Enabled", isOn: $enabled) }.surfaceRows()
+            Section("Connection") {
+                LabeledContent("Model") { TextField(provider["defaultModel"].text, text: $selectedModel).multilineTextAlignment(.trailing).textInputAutocapitalization(.never).autocorrectionDisabled() }
+                LabeledContent("Endpoint") { TextField("Optional", text: $customURL).multilineTextAlignment(.trailing).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled() }
+                SecureField(provider["hasApiKey"].flag ? "API key saved · enter to replace" : "API key", text: $key)
+            }.surfaceRows()
+            Section {
+                Button("Save provider") {
+                    Task {
+                        do {
+                            if !key.isEmpty {
+                                _ = try await model.engine.request("/api/v1/secrets", method: "POST", body: .strings(["secretKey": "ai_" + provider.id, "secret": key]))
+                                key = ""
+                            }
+                            _ = try await model.engine.request("/api/v1/ai/providers/settings", method: "PUT", body: .object([
+                                "providerId": .string(provider.id), "enabled": .bool(enabled), "selectedModel": .string(selectedModel),
+                                "customUrl": customURL.isEmpty ? .null : .string(customURL)]))
+                            message = "Provider settings saved."
+                        } catch { message = error.localizedDescription }
+                    }
                 }
-            }
-            Button("Use as default") { Task {
-                do { _ = try await model.engine.request("/api/v1/ai/providers/default", method: "POST", body: .strings(["providerId": provider.id])); message = "Default provider updated." }
-                catch { message = error.localizedDescription }
-            } }
-            if let message { Text(message) }
-        }.navigationTitle(provider["name"].text).onAppear {
+                Button("Use as default") { Task {
+                    do { _ = try await model.engine.request("/api/v1/ai/providers/default", method: "POST", body: .strings(["providerId": provider.id])); message = "Default provider updated." }
+                    catch { message = error.localizedDescription }
+                } }
+            } footer: { if let message { Text(message) } }.surfaceRows()
+        }.themedForm().leadingPageTitle(provider["name"].text).onAppear {
             selectedModel = provider["selectedModel"].text.isEmpty ? provider["defaultModel"].text : provider["selectedModel"].text
             customURL = provider["customUrl"].text; enabled = provider["enabled"].flag
         }

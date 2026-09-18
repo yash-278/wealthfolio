@@ -537,18 +537,29 @@ struct DashboardView: View {
 
 struct AccountDetailView: View {
     let account: Record
+    @Environment(AppModel.self) private var model
     @State private var editing = false
     var body: some View {
         List {
             Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Total value").font(.subheadline).foregroundStyle(.secondary)
+                    Text(money(model.valuation["accounts"].values.first(where: { $0["accountId"].text == account.id })?["totalValue"] ?? .null,
+                               currency: account["currency"].text, hidden: model.hideBalances))
+                        .font(.system(.largeTitle, design: .rounded).weight(.semibold)).monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
+                }.listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 8, leading: 4, bottom: 8, trailing: 4))
+            }
+            Section {
                 LabeledContent("Currency", value: account["currency"].text)
                 LabeledContent("Type", value: account["accountType"].text.capitalized)
                 LabeledContent("Tracking", value: account["trackingMode"].text.capitalized)
-            }
-            NavigationLink("Transactions") { ActivitiesView(accountID: account.id) }
-            NavigationLink("Holdings") { HoldingsView(accountID: account.id) }
-        }.navigationTitle(account["name"].text)
-        .toolbar { Button("Edit") { editing = true } }
+            }.surfaceRows()
+            Section {
+                NavigationLink { ActivitiesView(accountID: account.id) } label: { Label("Transactions", systemImage: "list.bullet.rectangle") }
+                NavigationLink { HoldingsView(accountID: account.id) } label: { Label("Holdings", systemImage: "briefcase") }
+            }.surfaceRows()
+        }.listStyle(.insetGrouped).themedForm().leadingPageTitle(account["name"].text)
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Edit") { editing = true } } }
         .sheet(isPresented: $editing) { NavigationStack { AccountEditor(account: account) } }
     }
 }
@@ -564,16 +575,21 @@ struct AccountEditor: View {
     @State private var error: String?
     var body: some View {
         Form {
-            TextField("Account name", text: $name)
-            TextField("Currency", text: $currency).disabled(account != nil).textInputAutocapitalization(.characters).autocorrectionDisabled()
-            Picker("Type", selection: $kind) {
-                ForEach(["SECURITIES", "CASH", "CRYPTOCURRENCY", "OTHER"], id: \.self) { Text($0.capitalized).tag($0) }
-            }
-            if let error { Text(error).foregroundStyle(.red) }
-        }.navigationTitle(account == nil ? "New account" : "Edit account")
+            Section("Account") {
+                TextField("Account name", text: $name)
+                Picker("Type", selection: $kind) {
+                    ForEach(["SECURITIES", "CASH", "CRYPTOCURRENCY", "OTHER"], id: \.self) { Text($0.capitalized).tag($0) }
+                }
+            }.surfaceRows()
+            Section {
+                LabeledContent("Currency") { TextField("USD", text: $currency).disabled(account != nil).multilineTextAlignment(.trailing).textInputAutocapitalization(.characters).autocorrectionDisabled() }
+            } footer: { if account != nil { Text("The currency of an existing account cannot be changed.") } }.surfaceRows()
+            if let error { Section { Label(error, systemImage: "exclamationmark.circle").font(.subheadline).foregroundStyle(.red) }.surfaceRows() }
+        }.themedForm().navigationTitle(account == nil ? "New account" : "Edit account")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) { Button("Save") { Task { await save() } }.disabled(saving || name.trimmingCharacters(in: .whitespaces).isEmpty) }
+            ToolbarItem(placement: .confirmationAction) { Button(saving ? "Saving…" : "Save") { Task { await save() } }.disabled(saving || name.trimmingCharacters(in: .whitespaces).isEmpty) }
         }
         .onAppear {
             name = account?["name"].text ?? ""

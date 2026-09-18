@@ -33,3 +33,11 @@ on the native client. No production data was copied to this new app during tests
 The native build installed on the paired iPhone and the launch command succeeded.
 Visual and feature acceptance remain pending. Swift XCTest cases were added for
 financial precision, missing values and dates; they have not yet run in Xcode.
+
+2026-09-18: More, Settings, Your server, AI providers, Assistant, Chat, Quick Add,
+capture review, Quick Add settings, Export, Setup, account detail and account editor
+were moved onto the dashboard design system (canvas/surface palette, leading page
+title, glass controls). `UITests/ScreenTourTests.swift` walks these screens on a
+fresh simulator install with no portfolio data and attaches a screenshot of each;
+it passed on the iPhone 17 simulator in light appearance. Dark appearance,
+accessibility text sizes and a physical device were not reviewed.

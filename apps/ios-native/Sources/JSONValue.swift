@@ -57,3 +57,9 @@ func parseActivityDate(_ text: String) -> Date? {
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     return formatter.date(from: text)
 }
+
+// Devices can report legacy identifiers (Asia/Calcutta) that the known list omits.
+func timeZoneChoices(including current: String) -> [String] {
+    let known = TimeZone.knownTimeZoneIdentifiers
+    return current.isEmpty || known.contains(current) ? known : [current] + known
+}

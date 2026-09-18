@@ -21,6 +21,8 @@ mkdir -p "$APP_ROOT/Libraries/$SDK"
 cp "${CARGO_TARGET_DIR:-$REPO_ROOT/target}/$RUST_TARGET/debug/libwealthfolio_native.a" "$APP_ROOT/Libraries/$SDK/"
 xcodegen generate --spec "$APP_ROOT/project.yml" --project "$APP_ROOT"
 SIGNING=(CODE_SIGNING_ALLOWED=NO)
+# The Rust library is only built for arm64 simulators.
+if [[ "$BUILD_KIND" == simulator ]]; then SIGNING+=(ARCHS=arm64); fi
 if [[ -n "${WF_DEVELOPMENT_TEAM:-}" && "$BUILD_KIND" == device ]]; then
   SIGNING=("DEVELOPMENT_TEAM=$WF_DEVELOPMENT_TEAM" -allowProvisioningUpdates)
 fi
