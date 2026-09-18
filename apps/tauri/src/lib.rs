@@ -266,6 +266,9 @@ mod mobile {
         {
             let _ = handle.plugin(tauri_plugin_web_auth::init());
             let _ = handle.plugin(tauri_plugin_mobile_share::init());
+            handle
+                .plugin(tauri_plugin_native_glass::init())
+                .expect("native iOS controls");
         }
     }
 
