@@ -19,7 +19,8 @@ targets:
         PRODUCT_NAME: Wealthfolio Native
         SWIFT_OBJC_BRIDGING_HEADER: Sources/NativeEngine.h
         LIBRARY_SEARCH_PATHS: "$(inherited) $(PROJECT_DIR)/Libraries/$(PLATFORM_NAME)"
-        OTHER_LDFLAGS: ["$(inherited)", "-lwealthfolio_native", "-lc++", "-lz", "-liconv", "-lresolv"]
+        OTHER_LDFLAGS:
+          ["$(inherited)", "-lwealthfolio_native", "-lc++", "-lz", "-liconv", "-lresolv"]
         TARGETED_DEVICE_FAMILY: "1,2"
     info:
       path: build/Info.plist
@@ -31,7 +32,13 @@ targets:
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: true
-        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight, UIInterfaceOrientationPortraitUpsideDown]
+        UISupportedInterfaceOrientations:
+          [
+            UIInterfaceOrientationPortrait,
+            UIInterfaceOrientationLandscapeLeft,
+            UIInterfaceOrientationLandscapeRight,
+            UIInterfaceOrientationPortraitUpsideDown,
+          ]
         NSFaceIDUsageDescription: Unlock your Wealthfolio portfolio.
     dependencies:
       - sdk: Security.framework
