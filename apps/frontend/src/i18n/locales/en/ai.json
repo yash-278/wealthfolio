@@ -623,6 +623,9 @@
       "repetitionBlurb": "Discourage the model from repeating itself.",
       "otherTitle": "Other",
       "otherBlurb": "Miscellaneous provider-specific options."
-    }
+    },
+    "bedrockRegion": "AWS region",
+    "bedrockDescription": "Use the region where your Bedrock API key and model access are configured. AWS bills this usage separately. AWS access keys and session tokens are not supported here.",
+    "bedrockModels": "Save the region and API key, then refresh the model list to test the connection. Model availability varies by region. For a model outside the catalog, configure its tool and image capabilities before using it."
   }
 }
