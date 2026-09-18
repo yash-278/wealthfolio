@@ -16,7 +16,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.yashkadam.wealthfolio.native
-        PRODUCT_NAME: Wealthfolio Native
+        PRODUCT_NAME: Steadyfolio
         SWIFT_OBJC_BRIDGING_HEADER: Sources/NativeEngine.h
         LIBRARY_SEARCH_PATHS: "$(inherited) $(PROJECT_DIR)/Libraries/$(PLATFORM_NAME)"
         OTHER_LDFLAGS:
@@ -29,7 +29,7 @@ targets:
       path: build/Info.plist
       properties:
         CADisableMinimumFrameDurationOnPhone: true
-        CFBundleDisplayName: Wealthfolio Native
+        CFBundleDisplayName: Steadyfolio
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
@@ -42,7 +42,7 @@ targets:
             UIInterfaceOrientationLandscapeRight,
             UIInterfaceOrientationPortraitUpsideDown,
           ]
-        NSFaceIDUsageDescription: Unlock your Wealthfolio portfolio.
+        NSFaceIDUsageDescription: Unlock your Steadyfolio portfolio.
     dependencies:
       - sdk: Security.framework
       - sdk: SystemConfiguration.framework

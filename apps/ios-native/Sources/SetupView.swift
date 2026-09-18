@@ -15,7 +15,7 @@ struct SetupView: View {
                     Image(systemName: "chart.xyaxis.line").font(.title).foregroundStyle(palette.accent)
                         .frame(width: 64, height: 64).background(palette.accent.opacity(0.1), in: .rect(cornerRadius: 20)).accessibilityHidden(true)
                     Text("Your portfolio. On your device.").font(.system(.largeTitle, design: .rounded).weight(.semibold))
-                    Text("Choose how you want to view your portfolio. You can connect to your existing server after setup, or use Wealthfolio offline.")
+                    Text("Choose how you want to view your portfolio. You can connect to your existing server after setup, or use Steadyfolio offline.")
                         .font(.body).foregroundStyle(.secondary)
                 }
                 VStack(alignment: .leading, spacing: 4) {

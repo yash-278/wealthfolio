@@ -64,6 +64,12 @@ struct SettingsView: View {
             }.surfaceRows()
             Section("Data") { NavigationLink { ExportView() } label: { Label("Export CSV", systemImage: "square.and.arrow.up") } }.surfaceRows()
             Section("Assistant") { NavigationLink { AIProvidersView() } label: { Label("AI providers", systemImage: "sparkles") } }.surfaceRows()
+            Section {
+                LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")
+                Link(destination: URL(string: "https://github.com/yash-278/wealthfolio")!) { Label("Source code (AGPL-3.0)", systemImage: "chevron.left.forwardslash.chevron.right") }
+            } header: { Text("About") } footer: {
+                Text("Steadyfolio is an independent fork based on Wealthfolio (https://wealthfolio.app) and is not affiliated with or endorsed by the official project. Wealthfolio is a trademark of Teymz Inc.")
+            }.surfaceRows()
         }.themedForm().leadingPageTitle("Settings")
         .onAppear { currency = model.currency; timezone = model.settings["timezone"].text }
     }

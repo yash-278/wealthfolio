@@ -1,4 +1,10 @@
-# Wealthfolio Native
+# Steadyfolio (native iOS client)
+
+Steadyfolio is an independent fork based on
+[Wealthfolio](https://wealthfolio.app/) and is not affiliated with or endorsed
+by the official project. Wealthfolio is a trademark of Teymz Inc. The source is
+licensed under AGPL-3.0; project, target and bundle identifiers keep their
+original internal names so existing installs and data carry over.
 
 Standalone SwiftUI iOS client, minimum iOS 26. The existing Tauri client is
 retained as the reference. This is an initial implementation, not full feature
