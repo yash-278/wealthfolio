@@ -15,7 +15,7 @@ targets:
     sources: [Sources]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yashkadam.wealthfolio.native
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashkadam.steadyfolio
         PRODUCT_NAME: Steadyfolio
         SWIFT_OBJC_BRIDGING_HEADER: Sources/NativeEngine.h
         LIBRARY_SEARCH_PATHS: "$(inherited) $(PROJECT_DIR)/Libraries/$(PLATFORM_NAME)"
@@ -55,7 +55,7 @@ targets:
       - target: WealthfolioNative
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yashkadam.wealthfolio.native.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashkadam.steadyfolio.tests
         GENERATE_INFOPLIST_FILE: YES
   WealthfolioNativeUITests:
     type: bundle.ui-testing
@@ -65,7 +65,7 @@ targets:
       - target: WealthfolioNative
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yashkadam.wealthfolio.native.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashkadam.steadyfolio.uitests
         GENERATE_INFOPLIST_FILE: YES
 schemes:
   WealthfolioNative:

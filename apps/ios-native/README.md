@@ -3,8 +3,8 @@
 Steadyfolio is an independent fork based on
 [Wealthfolio](https://wealthfolio.app/) and is not affiliated with or endorsed
 by the official project. Wealthfolio is a trademark of Teymz Inc. The source is
-licensed under AGPL-3.0; project, target and bundle identifiers keep their
-original internal names so existing installs and data carry over.
+licensed under AGPL-3.0; the Xcode project, targets and Rust crate keep their
+original internal names.
 
 Standalone SwiftUI iOS client, minimum iOS 26. The existing Tauri client is
 retained as the reference. This is an initial implementation, not full feature
@@ -24,7 +24,7 @@ The only change to server initialization is an optional SecretStore injection.
 The normal server entry point retains its encrypted-file store; the native
 client injects Keychain. No deployment or API/protocol change is required.
 
-The separate bundle identifier is `com.yashkadam.wealthfolio.native`. Its SQLite
+The separate bundle identifier is `com.yashkadam.steadyfolio`. Its SQLite
 database is in its own Application Support directory. It does not read or
 overwrite the reference app's database. User preferences are initialized in
 native onboarding; the current sync protocol intentionally keeps display
