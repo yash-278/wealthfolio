@@ -36,4 +36,8 @@ cat > "$OPTIONS" <<PLIST
 PLIST
 xcodebuild -exportArchive -archivePath "$ARCHIVE" -exportOptionsPlist "$OPTIONS" \
   -exportPath "$APP_ROOT/build/TestFlight" -allowProvisioningUpdates
-echo "Build $BUILD_NUMBER submitted. It appears in App Store Connect > TestFlight after processing."
+if [[ "${WF_EXPORT_DESTINATION:-upload}" == upload ]]; then
+  echo "Build $BUILD_NUMBER uploaded. It appears in App Store Connect > TestFlight after processing."
+else
+  echo "Build $BUILD_NUMBER exported to $APP_ROOT/build/TestFlight without uploading."
+fi
