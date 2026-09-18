@@ -46,6 +46,14 @@ cargo test -p wealthfolio-native-app --test offline_contract
 cargo test -p wealthfolio-native-app --test sync_contract
 ```
 
+```sh
+xcodebuild -project apps/ios-native/WealthfolioNative.xcodeproj -scheme WealthfolioNativeUITests \
+  -destination 'platform=iOS Simulator,name=iPhone 17' ARCHS=arm64 test
+```
+
+Run the simulator build first. The screen tour expects a fresh install and
+attaches a screenshot per screen to the result bundle.
+
 The offline contract verifies account/transaction creation, canonical rejection
 of invalid input, persisted data after reopening, initial screen reads and
 absence of a secrets file. The sync contract uses an authenticated synthetic

@@ -22,6 +22,32 @@ extension View {
     }
 }
 
+// Forms and lists keep system controls; only canvas, row surface and tint change.
+private struct ThemedForm: ViewModifier {
+    @Environment(\.colorScheme) private var scheme
+    func body(content: Content) -> some View {
+        let palette = InsightPalette(scheme: scheme)
+        content.scrollContentBackground(.hidden).background(palette.canvas).tint(palette.accent)
+    }
+}
+private struct SurfaceRows: ViewModifier {
+    @Environment(\.colorScheme) private var scheme
+    func body(content: Content) -> some View { content.listRowBackground(InsightPalette(scheme: scheme).surface) }
+}
+extension View {
+    func themedForm() -> some View { modifier(ThemedForm()) }
+    func surfaceRows() -> some View { modifier(SurfaceRows()) }
+}
+
+struct IconTile: View {
+    let symbol: String
+    var tint: Color
+    var body: some View {
+        Image(systemName: symbol).font(.body).foregroundStyle(tint).frame(width: 40, height: 40)
+            .background(tint.opacity(0.1), in: .rect(cornerRadius: 12)).accessibilityHidden(true)
+    }
+}
+
 struct PerformanceView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var scheme
@@ -275,14 +301,19 @@ struct ExportView: View {
     @State private var error: String?
     var body: some View {
         Form {
-            Picker("Data", selection: $kind) {
-                Text("Transactions").tag("activities"); Text("Accounts").tag("accounts"); Text("Holdings").tag("holdings"); Text("Goals").tag("goals"); Text("Portfolio history").tag("portfolio-history")
-            }.onChange(of: kind) { _, _ in file = nil }
-            Button("Prepare CSV") { Task { await prepare() } }.disabled(working)
-            if working { ProgressView() }
-            if let error { Text(error).foregroundStyle(.red) }
-            if let file { ShareLink("Save or share CSV", item: file) }
-        }.navigationTitle("Export")
+            Section {
+                Picker("Data", selection: $kind) {
+                    Text("Transactions").tag("activities"); Text("Accounts").tag("accounts"); Text("Holdings").tag("holdings"); Text("Goals").tag("goals"); Text("Portfolio history").tag("portfolio-history")
+                }.onChange(of: kind) { _, _ in file = nil }
+            } footer: { Text("The file is prepared on this device and is only shared when you choose a destination.") }.surfaceRows()
+            Section {
+                Button { Task { await prepare() } } label: {
+                    HStack { Label("Prepare CSV", systemImage: "doc.badge.gearshape"); Spacer(); if working { ProgressView() } }
+                }.disabled(working)
+                if let file { ShareLink(item: file) { Label("Save or share CSV", systemImage: "square.and.arrow.up") } }
+            }.surfaceRows()
+            if let error { Section { Label(error, systemImage: "exclamationmark.circle").font(.subheadline).foregroundStyle(.red) }.surfaceRows() }
+        }.themedForm().leadingPageTitle("Export")
     }
     private func prepare() async {
         working = true; file = nil; error = nil; defer { working = false }
