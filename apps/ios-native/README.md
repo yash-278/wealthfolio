@@ -39,6 +39,22 @@ Without it, the script compiles an unsigned build. `CARGO_TARGET_DIR`,
 `CARGO_HOME`, `RUSTUP_HOME` and `DEVELOPER_DIR` can be supplied by the build
 environment.
 
+## TestFlight
+
+Requires a paid Apple Developer Program team signed in to Xcode, and an app
+record for the bundle identifier in App Store Connect.
+
+```sh
+WF_DEVELOPMENT_TEAM=<team id> bash apps/ios-native/scripts/testflight.sh
+```
+
+The script builds the Rust library in release mode, archives a Release build
+with a timestamp build number (`WF_BUILD_NUMBER` overrides it) and uploads it.
+Set `WF_EXPORT_DESTINATION=export` to write the `.ipa` to `build/TestFlight`
+without uploading. App Store Connect asks the export compliance question for
+each build; the binary bundles ChaCha20-Poly1305, X25519 and Argon2 in addition
+to system TLS. `scripts/make-icon.swift` regenerates the app icon.
+
 ## Checks
 
 ```sh
