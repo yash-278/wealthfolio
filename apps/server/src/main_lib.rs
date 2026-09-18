@@ -243,6 +243,15 @@ fn start_sync_outbox_wake_worker(
 }
 
 pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
+    build_state_with_secret_store(config, None).await
+}
+
+/// Allows embedded native clients to use the OS credential store.
+/// The deployed server continues to use its existing encrypted file store.
+pub async fn build_state_with_secret_store(
+    config: &Config,
+    native_secret_store: Option<Arc<dyn SecretStore>>,
+) -> anyhow::Result<Arc<AppState>> {
     // Ensure DATABASE_URL aligns with WF_DB_PATH so core picks the right file
     std::env::set_var("DATABASE_URL", &config.db_path);
     let db_path = db::init(&config.db_path)?;
@@ -252,21 +261,26 @@ pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
         .unwrap_or_else(|| std::path::Path::new("."))
         .to_path_buf();
 
-    let resolved_secret_path = std::env::var("WF_SECRET_FILE")
-        .ok()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| data_root_path.join("secrets.json"));
-    let file_store = build_secret_store(
-        resolved_secret_path.clone(),
-        Some(config.secrets_encryption_key),
-        Some(&config.raw_secret_key),
-    )
-    .map_err(anyhow::Error::new)?;
-    let secret_store: Arc<dyn SecretStore> = Arc::new(file_store);
-    std::env::set_var(
-        "WF_SECRET_FILE",
-        resolved_secret_path.to_string_lossy().to_string(),
-    );
+    let secret_store: Arc<dyn SecretStore> = if let Some(store) = native_secret_store {
+        store
+    } else {
+        let resolved_secret_path = std::env::var("WF_SECRET_FILE")
+            .ok()
+            .map(PathBuf::from)
+            .unwrap_or_else(|| data_root_path.join("secrets.json"));
+        let file_store = build_secret_store(
+            resolved_secret_path.clone(),
+            Some(config.secrets_encryption_key),
+            Some(&config.raw_secret_key),
+        )
+        .map_err(anyhow::Error::new)?;
+
+        std::env::set_var(
+            "WF_SECRET_FILE",
+            resolved_secret_path.to_string_lossy().to_string(),
+        );
+        Arc::new(file_store)
+    };
 
     db::run_migrations(&db_path)?;
 

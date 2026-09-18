@@ -1,0 +1,8 @@
+[default]
+description = "Native iOS navigation controls and their action events."
+permissions = ["allow-update", "allow-remove", "events"]
+
+[[permission]]
+identifier = "events"
+description = "Subscribe to native navigation actions."
+commands.allow = ["registerListener", "removeListener"]
