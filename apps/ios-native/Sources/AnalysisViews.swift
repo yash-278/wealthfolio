@@ -322,7 +322,7 @@ struct ExportView: View {
             guard !result.text.isEmpty else { error = "There is no data to export."; return }
             let directory = FileManager.default.temporaryDirectory.appending(path: "Exports")
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            let url = directory.appending(path: "wealthfolio-\(kind).csv")
+            let url = directory.appending(path: "steadyfolio-\(kind).csv")
             try Data(result.text.utf8).write(to: url, options: [.atomic, .completeFileProtection]); file = url
         } catch { self.error = error.localizedDescription }
     }
