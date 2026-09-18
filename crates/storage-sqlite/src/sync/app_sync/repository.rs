@@ -1,5 +1,10 @@
 //! Repository for app-side device sync tables.
 
+#[path = "server_client.rs"]
+pub mod server_client;
+#[path = "server_sync.rs"]
+pub mod server_sync;
+
 use chrono::{DateTime, Duration, Utc};
 use diesel::prelude::*;
 use diesel::r2d2::{self, Pool};
@@ -138,7 +143,7 @@ struct PortfolioAccountForeignKeyContext {
 }
 
 const USER_SYNCABLE_ACTIVITIES_FILTER_SQL: &str = "\
-    UPPER(COALESCE(source_system, '')) IN ('MANUAL', 'CSV') \
+    UPPER(COALESCE(source_system, '')) IN ('MANUAL', 'CSV', 'QUICK_ADD') \
     OR ((source_system IS NULL OR TRIM(source_system) = '') \
         AND (import_run_id IS NULL OR TRIM(import_run_id) = '') \
         AND (source_record_id IS NULL OR TRIM(source_record_id) = ''))";
@@ -146,7 +151,7 @@ const USER_SYNCABLE_ACTIVITIES_FILTER_SQL: &str = "\
 const ROWS_WITH_USER_SYNCABLE_ACTIVITY_FILTER_SQL: &str = "\
     activity_id IN (
         SELECT id FROM activities
-        WHERE UPPER(COALESCE(source_system, '')) IN ('MANUAL', 'CSV')
+        WHERE UPPER(COALESCE(source_system, '')) IN ('MANUAL', 'CSV', 'QUICK_ADD')
            OR ((source_system IS NULL OR TRIM(source_system) = '')
                AND (import_run_id IS NULL OR TRIM(import_run_id) = '')
                AND (source_record_id IS NULL OR TRIM(source_record_id) = ''))
@@ -1337,6 +1342,16 @@ pub(in crate::sync::app_sync) fn insert_outbox_event(
         op,
     )?;
 
+    server_client::capture_local(conn, &row)?;
+    server_sync::append_event(
+        conn,
+        &event_id,
+        entity,
+        &entity_id,
+        op,
+        &client_timestamp,
+        &serde_json::from_str(&row.payload)?,
+    )?;
     Ok(event_id)
 }
 
@@ -1960,6 +1975,31 @@ fn apply_remote_event_lww_tx(
     seq_value: i64,
     payload_json: serde_json::Value,
 ) -> Result<bool> {
+    apply_remote_event_tx(
+        conn,
+        entity,
+        entity_id_value,
+        op,
+        event_id_value,
+        client_timestamp_value,
+        seq_value,
+        payload_json,
+        true,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn apply_remote_event_tx(
+    conn: &mut SqliteConnection,
+    entity: SyncEntity,
+    entity_id_value: String,
+    op: SyncOperation,
+    event_id_value: String,
+    client_timestamp_value: String,
+    seq_value: i64,
+    payload_json: serde_json::Value,
+    use_lww: bool,
+) -> Result<bool> {
     let already_applied = sync_applied_events::table
         .find(&event_id_value)
         .first::<SyncAppliedEventDB>(conn)
@@ -1973,16 +2013,17 @@ fn apply_remote_event_lww_tx(
     let entity_db = enum_to_db(&entity)?;
     let metadata_row = load_entity_metadata_tx(conn, &entity_db, &entity_id_value)?;
 
-    let mut should_apply = match metadata_row.as_ref() {
-        Some(meta) => should_apply_against_metadata(
-            entity,
-            meta,
-            op,
-            &client_timestamp_value,
-            &event_id_value,
-        )?,
-        None => true,
-    };
+    let mut should_apply = !use_lww
+        || match metadata_row.as_ref() {
+            Some(meta) => should_apply_against_metadata(
+                entity,
+                meta,
+                op,
+                &client_timestamp_value,
+                &event_id_value,
+            )?,
+            None => true,
+        };
 
     let mut record_applied_event = true;
     if should_apply {
@@ -2157,6 +2198,18 @@ fn apply_remote_event_lww_tx(
         } else {
             should_apply = false;
         }
+    }
+
+    if should_apply {
+        server_sync::append_event(
+            conn,
+            &event_id_value,
+            entity,
+            &entity_id_value,
+            op,
+            &client_timestamp_value,
+            &payload_json,
+        )?;
     }
 
     if record_applied_event {
@@ -3131,8 +3184,27 @@ impl AppSyncRepository {
     }
 
     pub async fn export_snapshot_sqlite_image(&self, tables: Vec<String>) -> Result<Vec<u8>> {
+        self.export_snapshot_with_server_sync(tables, false)
+            .await
+            .map(|(bytes, _)| bytes)
+    }
+
+    pub async fn export_server_sync_snapshot(
+        &self,
+    ) -> Result<(Vec<u8>, server_sync::ServerSyncHead)> {
+        let (bytes, head) = self
+            .export_snapshot_with_server_sync(Vec::new(), true)
+            .await?;
+        Ok((bytes, head.expect("server sync manifest requested")))
+    }
+
+    async fn export_snapshot_with_server_sync(
+        &self,
+        tables: Vec<String>,
+        server_sync: bool,
+    ) -> Result<(Vec<u8>, Option<server_sync::ServerSyncHead>)> {
         let pool = Arc::clone(&self.pool);
-        tokio::task::spawn_blocking(move || -> Result<Vec<u8>> {
+        tokio::task::spawn_blocking(move || -> Result<(Vec<u8>, Option<server_sync::ServerSyncHead>)> {
             let mut conn = get_connection(&pool)?;
             let table_set = if tables.is_empty() {
                 APP_SYNC_TABLES
@@ -3151,6 +3223,7 @@ impl AppSyncRepository {
             let escaped_path = escape_sqlite_str(&snapshot_path.to_string_lossy());
             let snapshot_alias = format!("snapshot_export_{}", Uuid::now_v7().simple());
             let attach_sql = format!("ATTACH DATABASE '{}' AS {}", escaped_path, snapshot_alias);
+            let mut sync_head = None;
             let tx_result = conn.immediate_transaction::<_, StorageError, _>(|tx| {
                 diesel::sql_query(attach_sql.clone())
                     .execute(tx)
@@ -3172,6 +3245,12 @@ impl AppSyncRepository {
                             .execute(tx)
                             .map_err(StorageError::from)?;
                     }
+                    if server_sync {
+                        sync_head = Some(server_sync::head(tx)?);
+                        diesel::sql_query(format!(
+                            "CREATE TABLE {snapshot_alias}.server_sync_revisions AS SELECT entity, entity_id, last_event_id FROM main.server_sync_revisions"
+                        )).execute(tx).map_err(StorageError::from)?;
+                    }
                     Ok(())
                 })();
 
@@ -3191,7 +3270,7 @@ impl AppSyncRepository {
                 )))
             })?;
             let _ = std::fs::remove_file(snapshot_path);
-            Ok(payload)
+            Ok((payload, sync_head))
         })
         .await
         .map_err(|e| {
@@ -3210,8 +3289,51 @@ impl AppSyncRepository {
         device_id_value: String,
         key_version_value: Option<i32>,
     ) -> Result<()> {
+        self.restore_snapshot_internal(
+            snapshot_db_path,
+            tables,
+            cursor_value,
+            device_id_value,
+            key_version_value,
+            None,
+        )
+        .await
+    }
+
+    pub async fn bootstrap_server_client(
+        &self,
+        snapshot_db_path: String,
+        endpoint: String,
+        server_id: String,
+        cursor: i64,
+    ) -> Result<()> {
+        self.restore_snapshot_internal(
+            snapshot_db_path,
+            Vec::new(),
+            cursor,
+            "own-server".into(),
+            None,
+            Some((endpoint, server_id)),
+        )
+        .await
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    async fn restore_snapshot_internal(
+        &self,
+        snapshot_db_path: String,
+        tables: Vec<String>,
+        cursor_value: i64,
+        device_id_value: String,
+        key_version_value: Option<i32>,
+        own_server: Option<(String, String)>,
+    ) -> Result<()> {
         self.writer
             .exec(move |conn| {
+                if own_server.is_some() { server_client::require_empty_client(conn)?; }
+                if own_server.is_none() && server_client::is_paired(conn)? {
+                    return Err(Error::Validation(wealthfolio_core::errors::ValidationError::InvalidInput("Disconnecting or replacing an own-server database requires a separate migration".into())));
+                }
                 let table_set = canonical_sync_table_set(tables)?;
                 let table_set_lookup = table_set.iter().cloned().collect::<HashSet<_>>();
 
@@ -3435,6 +3557,9 @@ impl AppSyncRepository {
                         .execute(conn)
                         .map_err(StorageError::from)?;
 
+                    if let Some((endpoint, server_id)) = own_server.as_ref() {
+                        server_client::finish_bootstrap(conn, &snapshot_alias, endpoint, server_id, cursor_value)?;
+                    }
                     Ok(())
                 })();
 
@@ -7240,12 +7365,12 @@ mod tests {
             &mut conn,
             "manual-activity-sidecar",
             "acc-activity-sidecar",
-            "MANUAL",
+            "QUICK_ADD",
             None,
             None,
             0,
         )
-        .expect("insert manual activity");
+        .expect("insert Quick Add activity");
         insert_activity_for_snapshot_filter_test(
             &mut conn,
             "broker-activity-sidecar",

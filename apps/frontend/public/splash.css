@@ -14,9 +14,19 @@ body {
   overscroll-behavior: none;
 }
 
+/* Safari samples the root/background when drawing standalone status-bar chrome.
+ * Match the active theme, including before the application stylesheet loads. */
+html {
+  background-color: var(--background, hsl(48 100% 97%));
+}
+
+html.dark {
+  background-color: var(--background, hsl(0 3% 6%));
+}
+
 /* Simulate a Splash screen before react app mount */
 body {
-  background-color: #09090b;
+  background-color: inherit;
   background-image: url("/logo-gold.png");
   background-repeat: no-repeat;
   background-position: center center;

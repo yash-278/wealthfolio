@@ -418,6 +418,7 @@ export interface TransferMatchCandidate {
 }
 
 export interface ActivityImport {
+  bankReference?: string;
   id?: string;
   accountId: string;
   currency?: string;

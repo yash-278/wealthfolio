@@ -146,6 +146,8 @@ const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.C
     if (isMobile) {
       return (
         <SheetContent
+          ref={ref}
+          {...props}
           side={side}
           showCloseButton={showCloseButton}
           onEscapeKeyDown={handleEscapeKeyDown}

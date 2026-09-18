@@ -71,6 +71,7 @@ use wealthfolio_storage_sqlite::{
 };
 
 pub struct AppState {
+    pub capture_service: Arc<wealthfolio_core::captures::CaptureService>,
     /// Domain event sink for emitting events after mutations.
     /// Note: The sink is used by services injected at construction time; this field
     /// is kept for documentation and possible future access patterns.
@@ -242,6 +243,15 @@ fn start_sync_outbox_wake_worker(
 }
 
 pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
+    build_state_with_secret_store(config, None).await
+}
+
+/// Allows embedded native clients to use the OS credential store.
+/// The deployed server continues to use its existing encrypted file store.
+pub async fn build_state_with_secret_store(
+    config: &Config,
+    native_secret_store: Option<Arc<dyn SecretStore>>,
+) -> anyhow::Result<Arc<AppState>> {
     // Ensure DATABASE_URL aligns with WF_DB_PATH so core picks the right file
     std::env::set_var("DATABASE_URL", &config.db_path);
     let db_path = db::init(&config.db_path)?;
@@ -251,21 +261,26 @@ pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
         .unwrap_or_else(|| std::path::Path::new("."))
         .to_path_buf();
 
-    let resolved_secret_path = std::env::var("WF_SECRET_FILE")
-        .ok()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| data_root_path.join("secrets.json"));
-    let file_store = build_secret_store(
-        resolved_secret_path.clone(),
-        Some(config.secrets_encryption_key),
-        Some(&config.raw_secret_key),
-    )
-    .map_err(anyhow::Error::new)?;
-    let secret_store: Arc<dyn SecretStore> = Arc::new(file_store);
-    std::env::set_var(
-        "WF_SECRET_FILE",
-        resolved_secret_path.to_string_lossy().to_string(),
-    );
+    let secret_store: Arc<dyn SecretStore> = if let Some(store) = native_secret_store {
+        store
+    } else {
+        let resolved_secret_path = std::env::var("WF_SECRET_FILE")
+            .ok()
+            .map(PathBuf::from)
+            .unwrap_or_else(|| data_root_path.join("secrets.json"));
+        let file_store = build_secret_store(
+            resolved_secret_path.clone(),
+            Some(config.secrets_encryption_key),
+            Some(&config.raw_secret_key),
+        )
+        .map_err(anyhow::Error::new)?;
+
+        std::env::set_var(
+            "WF_SECRET_FILE",
+            resolved_secret_path.to_string_lossy().to_string(),
+        );
+        Arc::new(file_store)
+    };
 
     db::run_migrations(&db_path)?;
 
@@ -357,6 +372,7 @@ pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
         writer.clone(),
     ));
     let app_sync_repository = Arc::new(AppSyncRepository::new(pool.clone(), writer.clone()));
+    app_sync_repository.repair_quick_add_sync().await?;
     let quote_sync_state_repository =
         Arc::new(QuoteSyncStateRepository::new(pool.clone(), writer.clone()));
 
@@ -881,7 +897,30 @@ pub async fn build_state(config: &Config) -> anyhow::Result<Arc<AppState>> {
         None => None,
     };
 
+    let capture_service = Arc::new(wealthfolio_core::captures::CaptureService::new(
+        Arc::new(
+            wealthfolio_storage_sqlite::captures::SqliteCaptureRepository::new(
+                pool.clone(),
+                writer.clone(),
+            ),
+        ),
+        Arc::new(
+            wealthfolio_ai::capture_extractor::BedrockCaptureExtractor::new(
+                ai_provider_service.clone(),
+            ),
+        ),
+        Arc::new(
+            wealthfolio_spending::capture_categorization::CaptureCategorization::new(
+                cash_activity_service.clone(),
+                categorization_rules_service.clone(),
+            ),
+        ),
+        account_service.clone(),
+        activity_service.clone(),
+    ));
+    wealthfolio_core::captures::CaptureService::start_worker(&capture_service);
     let state = Arc::new(AppState {
+        capture_service,
         domain_event_sink,
         account_service,
         settings_service,

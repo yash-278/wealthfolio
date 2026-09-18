@@ -246,6 +246,15 @@ impl CredentialStore for TauriEnginePorts {
     }
 
     async fn is_sync_allowed(&self) -> Result<bool, String> {
+        if self
+            .context
+            .app_sync_repository()
+            .server_client_status()
+            .map_err(|_| "Could not read sync mode")?
+            .is_some()
+        {
+            return Ok(false);
+        }
         self.context.connect_service().has_device_sync().await
     }
 

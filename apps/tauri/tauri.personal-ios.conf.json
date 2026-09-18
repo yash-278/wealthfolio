@@ -1,0 +1,14 @@
+{
+  "identifier": "com.yashkadam.wealthfolio.personal",
+  "productName": "Wealthfolio Personal",
+  "bundle": {
+    "iOS": {
+      "developmentTeam": null
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "mobile": []
+    }
+  }
+}

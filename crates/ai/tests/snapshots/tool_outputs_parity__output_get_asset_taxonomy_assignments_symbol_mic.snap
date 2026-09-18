@@ -11,6 +11,7 @@ expression: result
       "currency": "USD",
       "displayCode": "VT",
       "exchangeMic": "XNAS",
+      "instrumentType": "EQUITY",
       "label": "VT - Vanguard Total World Stock Index Fund ETF Shares",
       "matchedBy": "symbol_exchange_mic",
       "name": "Vanguard Total World Stock Index Fund ETF Shares",

@@ -69,8 +69,22 @@ pub(crate) fn create_openai_client(
     provider_id: &str,
     provider_url: Option<String>,
 ) -> Result<openai::CompletionsClient<HttpClient>, AiError> {
+    let provider_url = if provider_id == "bedrock" {
+        let url = validate_bedrock_url(provider_url.as_deref()).map_err(AiError::InvalidInput)?;
+        Some(url)
+    } else {
+        provider_url
+    };
     let key = api_key.ok_or_else(|| AiError::MissingApiKey(provider_id.to_string()))?;
     let mut builder = openai::CompletionsClient::builder().api_key(&key);
+    if provider_id == "bedrock" {
+        builder = builder.http_client(
+            HttpClient::builder()
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+                .map_err(|e| AiError::Provider(e.to_string()))?,
+        );
+    }
     if let Some(url) = provider_url {
         let normalized = ensure_openai_v1_base_url(&url);
         builder = builder.base_url(&normalized);
@@ -298,6 +312,23 @@ pub(super) async fn validate_ollama_model_if_possible(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bedrock_clients_reject_non_aws_urls_and_missing_region() {
+        for url in [
+            "https://api.openai.com/v1",
+            "https://example.com/openai/v1",
+            "not a URL",
+        ] {
+            assert!(create_openai_client(
+                Some("synthetic-key".into()),
+                "bedrock",
+                Some(url.into())
+            )
+            .is_err());
+        }
+        assert!(create_openai_client(Some("synthetic-key".into()), "bedrock", None).is_err());
+    }
 
     #[test]
     fn test_openai_compatible_clients_normalize_base_url() {

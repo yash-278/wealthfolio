@@ -7348,6 +7348,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tauri-plugin-native-glass"
+version = "0.1.0"
+dependencies = [
+ "tauri",
+ "tauri-plugin",
+]
+
+[[package]]
 name = "tauri-plugin-shell"
 version = "2.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8659,6 +8667,7 @@ dependencies = [
  "tauri-plugin-haptics",
  "tauri-plugin-log",
  "tauri-plugin-mobile-share",
+ "tauri-plugin-native-glass",
  "tauri-plugin-shell",
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
@@ -8676,6 +8685,7 @@ dependencies = [
  "wealthfolio-device-sync",
  "wealthfolio-market-data",
  "wealthfolio-mcp",
+ "wealthfolio-server-sync",
  "wealthfolio-spending",
  "wealthfolio-storage-sqlite",
  "x25519-dalek",
@@ -8816,6 +8826,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "wealthfolio-native-app"
+version = "3.9.0"
+dependencies = [
+ "argon2",
+ "axum 0.8.9",
+ "http-body-util",
+ "keyring",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tower 0.5.3",
+ "wealthfolio-core",
+ "wealthfolio-server",
+ "wealthfolio-server-sync",
+]
+
+[[package]]
 name = "wealthfolio-server"
 version = "3.9.0"
 dependencies = [
@@ -8865,6 +8894,23 @@ dependencies = [
  "wealthfolio-market-data",
  "wealthfolio-mcp",
  "wealthfolio-spending",
+ "wealthfolio-storage-sqlite",
+]
+
+[[package]]
+name = "wealthfolio-server-sync"
+version = "3.9.0"
+dependencies = [
+ "argon2",
+ "axum 0.8.9",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "uuid",
+ "wealthfolio-core",
+ "wealthfolio-server",
  "wealthfolio-storage-sqlite",
 ]
 

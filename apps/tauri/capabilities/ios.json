@@ -10,6 +10,7 @@
   ],
   "permissions": [
     "mobile-share:default",
+    "native-glass:default",
     "web-auth:default",
     "web-auth:allow-authenticate"
   ]

@@ -215,6 +215,7 @@ const COLUMN_ALIASES: Record<string, string[]> = {
     "account_number",
     "acct",
   ],
+  [ImportFormat.BANK_REFERENCE]: ["bank reference", "transaction reference", "utr", "rrn"],
   [ImportFormat.COMMENT]: [
     "comment",
     "comments",
@@ -266,6 +267,7 @@ const TRANSACTION_COLUMN_ALIASES: Partial<Record<ImportFormat, string[]>> = {
     "paid out",
     "paid in",
   ],
+  [ImportFormat.BANK_REFERENCE]: ["bank reference", "transaction reference", "utr", "rrn"],
   [ImportFormat.COMMENT]: [
     "merchant",
     "merchant name",

@@ -213,6 +213,7 @@ export const importActivitySchema = z
     lineNumber: z.number().optional(),
     isDraft: z.boolean(),
     comment: z.string().optional(),
+    bankReference: z.string().optional(),
     fxRate: decimalLikeSchema.nullable().optional(),
     subtype: z.string().optional(),
     forceImport: z.boolean().default(false),

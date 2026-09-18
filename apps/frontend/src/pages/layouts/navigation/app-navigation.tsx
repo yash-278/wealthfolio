@@ -28,6 +28,12 @@ function buildStaticNavigation(t: TFunction): NavigationProps {
   return {
     primary: [
       {
+        icon: <Icons.Activity className="size-6" />,
+        title: "Quick Add",
+        href: "/quick-add",
+        keywords: ["capture", "paste", "transaction"],
+      },
+      {
         icon: <Icons.Dashboard className="size-6" />,
         title: t("common:dashboard"),
         href: "/dashboard",

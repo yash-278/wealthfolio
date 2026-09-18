@@ -11,6 +11,7 @@ repository = "https://github.com/wealthfolio/wealthfolio"
 tauri-build = { version = "2.5", features = [] }
 
 [dependencies]
+wealthfolio-server-sync = { path = "../../crates/server-sync" }
 # Internal crates
 wealthfolio-market-data = { workspace = true }
 wealthfolio-core = { workspace = true }
@@ -96,3 +97,6 @@ tauri-plugin-barcode-scanner = { git = "https://github.com/tauri-apps/plugins-wo
 [target.'cfg(target_os = "ios")'.dependencies]
 tauri-plugin-web-auth = "1"
 tauri-plugin-mobile-share = "0.1.2"
+
+[target.'cfg(target_os = "ios")'.dependencies.tauri-plugin-native-glass]
+path = "../../crates/tauri-plugin-native-glass"

@@ -1842,6 +1842,13 @@ impl ActivityService {
         activity: &ActivityImport,
         default_account_id: &str,
     ) -> Option<String> {
+        if let Some(key) = super::bank_reference::key(
+            activity.account_id.as_deref().unwrap_or(default_account_id),
+            &activity.activity_type,
+            activity.bank_reference.as_deref(),
+        ) {
+            return Some(key);
+        }
         let date = Self::parse_import_date_for_idempotency(&activity.date)?;
         let account_id = activity.account_id.as_deref().unwrap_or(default_account_id);
 
@@ -4369,6 +4376,15 @@ impl ActivityService {
 
 #[async_trait::async_trait]
 impl ActivityServiceTrait for ActivityService {
+    async fn attach_source_evidence(
+        &self,
+        evidence: super::bank_reference::SourceEvidence,
+    ) -> Result<()> {
+        self.activity_repository
+            .attach_source_evidence(evidence)
+            .await
+    }
+
     fn get_activity(&self, activity_id: &str) -> Result<Activity> {
         self.activity_repository.get_activity(activity_id)
     }
@@ -5699,6 +5715,7 @@ impl ActivityServiceTrait for ActivityService {
             .await;
 
         // ── 5. Partition hard duplicates before insert ───────────────────────
+        let mut batch_reference_conflicts = HashSet::new();
         let mut first_index_by_key: HashMap<String, usize> = HashMap::new();
         let mut batch_dup_sources: HashMap<usize, usize> = HashMap::new();
 
@@ -5711,9 +5728,38 @@ impl ActivityServiceTrait for ActivityService {
             };
 
             if let Some(first_idx) = first_index_by_key.get(key).copied() {
+                let first: &NewActivity = &new_activities[first_idx];
+                if key.starts_with("bank-event-v1:")
+                    && (first.activity_type != activity.activity_type
+                        || first.amount != activity.amount
+                        || first.currency != activity.currency
+                        || Self::parse_import_date_for_idempotency(&first.activity_date)
+                            .map(|d| d.date_naive())
+                            != Self::parse_import_date_for_idempotency(&activity.activity_date)
+                                .map(|d| d.date_naive()))
+                {
+                    batch_reference_conflicts.insert(first_idx);
+                    batch_reference_conflicts.insert(position);
+                }
                 batch_dup_sources.insert(position, first_idx);
             } else {
                 first_index_by_key.insert(key.clone(), position);
+            }
+        }
+
+        // A contradiction invalidates the entire reference group, including
+        // exact repeats before or after the contradictory row.
+        let conflicted_keys: HashSet<_> = batch_reference_conflicts
+            .iter()
+            .filter_map(|position| new_activities[*position].idempotency_key.clone())
+            .collect();
+        for (position, activity) in new_activities.iter().enumerate() {
+            if activity
+                .idempotency_key
+                .as_ref()
+                .is_some_and(|key| conflicted_keys.contains(key))
+            {
+                batch_reference_conflicts.insert(position);
             }
         }
 
@@ -5749,7 +5795,73 @@ impl ActivityServiceTrait for ActivityService {
                 .get(position)
                 .is_some_and(|(_, imp)| imp.force_import);
 
-            if let Some(existing_id) = existing_duplicates.get(&key) {
+            if batch_reference_conflicts.contains(&position) {
+                if let Some((_, row)) = import_activities_indexed.get_mut(position) {
+                    Self::add_activity_error(
+                        row,
+                        "bankReference",
+                        "Conflicting rows share a bank reference; review both rows",
+                    );
+                }
+                continue;
+            }
+            let referenced_id = if key.starts_with("bank-event-v1:") {
+                let matches = super::bank_reference::referenced_matches(
+                    self.activity_repository
+                        .get_activities_by_account_id(&activity.account_id)?,
+                    &activity.account_id,
+                    &activity.activity_type,
+                    activity.source_record_id.as_deref(),
+                    &key,
+                );
+                if matches.len() > 1 {
+                    if let Some((_, row)) = import_activities_indexed.get_mut(position) {
+                        Self::add_activity_error(
+                            row,
+                            "bankReference",
+                            "Multiple recorded payments share this reference; review them",
+                        );
+                    }
+                    continue;
+                }
+                matches.into_iter().next().map(|a| a.id)
+            } else {
+                None
+            };
+            if let Some(existing_id) = referenced_id
+                .as_ref()
+                .or_else(|| existing_duplicates.get(&key))
+            {
+                if key.starts_with("bank-event-v1:") {
+                    let existing = self.activity_repository.get_activity(existing_id)?;
+                    let date = Self::parse_import_date_for_idempotency(&activity.activity_date)
+                        .ok_or_else(|| crate::Error::Unexpected("Invalid prepared date".into()))?
+                        .date_naive();
+                    if !super::bank_reference::compatible(
+                        &existing,
+                        &activity.account_id,
+                        &activity.activity_type,
+                        activity.amount,
+                        &activity.currency,
+                        date,
+                    ) {
+                        if let Some((_, row)) = import_activities_indexed.get_mut(position) {
+                            Self::add_activity_error(row,"bankReference","Reference matches a payment with conflicting date or financial fields; review it");
+                        }
+                        continue;
+                    }
+                    let reference = activity.source_record_id.clone().unwrap_or_default();
+                    self.activity_repository
+                        .attach_source_evidence(super::bank_reference::SourceEvidence {
+                            activity_id: existing_id.clone(),
+                            source_id: format!("statement:{key}:{date}"),
+                            source_system: "CSV".into(),
+                            reference,
+                            date: date.to_string(),
+                        })
+                        .await?;
+                }
+
                 if is_force_import {
                     // User explicitly chose to import despite DB duplicate.
                     // Clear key so the unique constraint is not violated.
@@ -7214,6 +7326,7 @@ mod reviewed_import_metadata_tests {
         quote_mode: Option<&str>,
     ) -> ActivityImport {
         ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2026-01-01".to_string(),
             symbol: symbol.to_string(),

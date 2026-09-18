@@ -27,6 +27,18 @@ use tauri::{AppHandle, Emitter, Manager};
 use events::{emit_app_ready, emit_portfolio_trigger_recalculate, PortfolioRequestPayload};
 use tauri_plugin_deep_link::DeepLinkExt;
 
+fn setup_own_server_sync(
+    handle: &AppHandle,
+    context: &Arc<context::ServiceContext>,
+) -> Result<(), String> {
+    let client = wealthfolio_server_sync::ServerSyncClient::new(
+        context.app_sync_repository(),
+        secret_store::shared_secret_store(),
+    )?;
+    handle.manage(Arc::new(client));
+    Ok(())
+}
+
 fn portfolio_history_backfill_needed(context: &Arc<context::ServiceContext>) -> bool {
     let accounts = match context.account_service().get_non_archived_accounts() {
         Ok(accounts) => accounts,
@@ -154,6 +166,7 @@ mod desktop {
 
         // Make context available to all commands
         handle.manage(Arc::clone(&context));
+        setup_own_server_sync(&handle, &context)?;
 
         // Embedded MCP server: clear any stale lock file from an unclean
         // shutdown, then auto-start when enabled + auto-start are both set.
@@ -253,6 +266,9 @@ mod mobile {
         {
             let _ = handle.plugin(tauri_plugin_web_auth::init());
             let _ = handle.plugin(tauri_plugin_mobile_share::init());
+            handle
+                .plugin(tauri_plugin_native_glass::init())
+                .expect("native iOS controls");
         }
     }
 
@@ -266,6 +282,10 @@ mod mobile {
                     let sync_outbox_wake_receiver = init_result.sync_outbox_wake_receiver;
 
                     handle.manage(Arc::clone(&context));
+                    if setup_own_server_sync(&handle, &context).is_err() {
+                        log::error!("Could not initialize own-server sync");
+                        return;
+                    }
 
                     #[cfg(feature = "device-sync")]
                     start_sync_outbox_wake_worker(sync_outbox_wake_receiver, Arc::clone(&context));
@@ -453,6 +473,21 @@ pub fn run() {
             commands::activity::check_existing_duplicates,
             commands::activity::parse_csv,
             // Settings commands
+            commands::captures::get_capture_reviews,
+            commands::captures::resolve_capture_review,
+            commands::captures::dismiss_capture_review,
+            commands::captures::get_capture_settings,
+            commands::captures::get_capture_usage,
+            commands::captures::update_capture_settings,
+            commands::server_sync::own_server_sync_status,
+            commands::server_sync::own_server_sync_connect,
+            commands::server_sync::own_server_sync_run,
+            commands::server_sync::own_server_sync_pause,
+            commands::server_sync::own_server_sync_accept_server,
+            commands::captures::submit_capture,
+            commands::captures::retry_capture,
+            commands::captures::clear_capture_source,
+            commands::captures::get_capture,
             commands::settings::get_settings,
             commands::settings::is_auto_update_check_enabled,
             commands::settings::update_settings,

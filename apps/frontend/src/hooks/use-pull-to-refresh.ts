@@ -15,6 +15,7 @@ interface PullToRefreshHandlers {
   onTouchStart: (e: React.TouchEvent) => void;
   onTouchMove: (e: React.TouchEvent) => void;
   onTouchEnd: (e: React.TouchEvent) => void;
+  onTouchCancel: (e: React.TouchEvent) => void;
 }
 
 interface PullToRefreshState {
@@ -82,7 +83,11 @@ export function usePullToRefresh({
       startXRef.current = touchX;
       currentYRef.current = touchY;
       hasTriggeredHapticRef.current = false;
-      shouldCancelRef.current = false;
+      shouldCancelRef.current =
+        e.touches.length !== 1 ||
+        target.scrollTop > 0 ||
+        (e.target as HTMLElement).closest("input, textarea, select, [contenteditable='true']") !==
+          null;
       gestureRef.current = "PENDING";
 
       // Check if we are scrolling an inner container
@@ -132,8 +137,7 @@ export function usePullToRefresh({
       }
 
       if (gestureRef.current === "PULL") {
-        e.preventDefault();
-        target.style.touchAction = "none";
+        if (e.cancelable) e.preventDefault();
         currentYRef.current = touchY;
 
         const effectiveDelta = Math.max(deltaY - startPullDistance, 0);
@@ -166,18 +170,21 @@ export function usePullToRefresh({
   );
 
   const onTouchEnd = useCallback(
-    (_e: React.TouchEvent) => {
+    (e: React.TouchEvent) => {
       if (disabled || !containerRef.current) return;
+
+      // Native scrolling must finish without changing the scrolling layer.
+      // Only a gesture claimed by pull-to-refresh needs a return animation.
+      if (gestureRef.current !== "PULL") {
+        containerRef.current = null;
+        return;
+      }
 
       const target = containerRef.current;
       const deltaY = currentYRef.current - startYRef.current;
 
-      // Reset any container styles (defensive)
-      target.style.transform = "";
-      target.style.transition = "";
-
       // Trigger refresh if pulled far enough
-      if (deltaY > activationDistance && isPulling) {
+      if (e.type !== "touchcancel" && deltaY > activationDistance && isPulling) {
         handleRefresh();
       }
 
@@ -188,8 +195,6 @@ export function usePullToRefresh({
       startYRef.current = 0;
       currentYRef.current = 0;
       gestureRef.current = "PENDING";
-      // Restore UA gesture handling
-      target.style.touchAction = "";
       containerRef.current = null;
       hasTriggeredHapticRef.current = false;
 
@@ -212,6 +217,7 @@ export function usePullToRefresh({
       onTouchStart,
       onTouchMove,
       onTouchEnd,
+      onTouchCancel: onTouchEnd,
     },
     {
       isPulling,

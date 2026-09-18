@@ -1,3 +1,8 @@
+import ServerSyncSettings from "@/features/server-sync/settings";
+import { ServerSyncRunner } from "@/features/server-sync/runner";
+import CaptureSettingsPanel from "@/features/quick-add/settings-panel";
+import { QuickAddReviewPage } from "@/features/quick-add/review-panel";
+import QuickAddPage from "@/features/quick-add/quick-add-page";
 import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
@@ -83,6 +88,7 @@ export function AppRoutes() {
   return (
     <BrowserRouter>
       <NavigationEventBridge />
+      <ServerSyncRunner />
       <Routes>
         {/* QR Scanner - No layout for fullscreen camera access */}
         {/* <Route path="/qr-scanner" element={<QRScannerPage />} /> */}
@@ -99,6 +105,8 @@ export function AppRoutes() {
         <Route path="/" element={<AppLayout />}>
           <Route index element={<PortfolioPage />} />
           <Route path="dashboard" element={<PortfolioPage />} />
+          <Route path="quick-add/review" element={<QuickAddReviewPage />} />
+          <Route path="quick-add" element={<QuickAddPage />} />
           <Route path="activities" element={<ActivityPage />} />
           <Route path="activities/manage" element={<ActivityManagerPage />} />
           <Route path="holdings" element={<HoldingsPage />} />
@@ -130,6 +138,7 @@ export function AppRoutes() {
             />
           ))}
           <Route path="settings" element={<SettingsLayout />}>
+            <Route path="quick-add" element={<CaptureSettingsPanel />} />
             <Route index element={<GeneralSettingsPage />} />
             <Route path="general" element={<GeneralSettingsPage />} />
             <Route path="accounts" element={<SettingsAccountsPage />} />
@@ -148,6 +157,7 @@ export function AppRoutes() {
             <Route path="securities" element={<AssetsPage />} />
             <Route path="taxonomies" element={<TaxonomiesPage />} />
             <Route path="connect" element={<ConnectSettingsPage />} />
+            <Route path="server-sync" element={<ServerSyncSettings />} />
             <Route path="ai-providers" element={<AiProvidersPage />} />
             <Route path="agent-access" element={<AgentAccessPage />} />
             <Route path="addons" element={<AddonSettingsPage />} />

@@ -1,3 +1,4 @@
+import { NativeGlassControls } from "@/components/native-glass-controls";
 import { ActionPalette, type ActionPaletteGroup } from "@/components/action-palette";
 import { syncService } from "@/features/devices-sync";
 import { useSyncStatus } from "@/features/devices-sync/hooks";
@@ -117,15 +118,33 @@ export function DashboardActions({ onAddAsset, onAddLiability }: DashboardAction
   ]);
 
   return (
-    <ActionPalette
-      open={open}
-      onOpenChange={setOpen}
-      groups={groups}
-      trigger={
-        <Button variant="secondary" size="icon-xs" className="bg-secondary/50 rounded-full">
-          <Icons.DotsThreeVertical className="size-5" weight="fill" />
-        </Button>
-      }
-    />
+    <NativeGlassControls
+      items={[
+        {
+          id: "actions",
+          title: t("common:layout.more_options"),
+          symbol: "ellipsis",
+          children: groups
+            .flatMap((group) => group.items)
+            .map((item, index) => ({
+              id: String(index),
+              title: item.label,
+              symbol: index === 0 ? "plus" : "arrow.triangle.2.circlepath",
+            })),
+        },
+      ]}
+      onAction={(id) => groups.flatMap((group) => group.items)[Number(id)]?.onClick()}
+    >
+      <ActionPalette
+        open={open}
+        onOpenChange={setOpen}
+        groups={groups}
+        trigger={
+          <Button variant="secondary" size="icon-xs" className="bg-secondary/50 rounded-full">
+            <Icons.DotsThreeVertical className="size-5" weight="fill" />
+          </Button>
+        }
+      />
+    </NativeGlassControls>
   );
 }

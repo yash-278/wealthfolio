@@ -1,6 +1,6 @@
 name: wealthfolio-app
 options:
-  bundleIdPrefix: com.teymz.wealthfolio
+  bundleIdPrefix: com.yashkadam.wealthfolio.personal
   deploymentTarget:
     iOS: 16.0
 fileGroups: [../../src]
@@ -10,8 +10,8 @@ configs:
 settingGroups:
   app:
     base:
-      PRODUCT_NAME: Wealthfolio
-      PRODUCT_BUNDLE_IDENTIFIER: com.teymz.wealthfolio
+      PRODUCT_NAME: Wealthfolio Personal
+      PRODUCT_BUNDLE_IDENTIFIER: com.yashkadam.wealthfolio.personal
 targetTemplates:
   app:
     type: application
