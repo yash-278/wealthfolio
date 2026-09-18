@@ -299,6 +299,7 @@ export {
   claimPairing,
   clearDeviceSyncData,
   clearSyncSession,
+  getSyncSessionStatus,
   completePairing,
   completePairingWithTransfer,
   confirmPairing,
@@ -524,3 +525,5 @@ export {
   syncHashPairingCode,
   syncHmacSha256,
 } from "./crypto";
+
+export * from "./captures";

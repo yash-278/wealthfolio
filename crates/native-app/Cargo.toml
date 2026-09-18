@@ -1,0 +1,26 @@
+[package]
+name = "wealthfolio-native-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "wealthfolio_native"
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+wealthfolio-server = { path = "../../apps/server", default-features = false }
+wealthfolio-server-sync = { path = "../server-sync" }
+wealthfolio-core = { path = "../core" }
+axum = "0.8"
+tower = { version = "0.5", features = ["util"] }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+keyring = "2.0"
+http-body-util = "0.1"
+
+[dev-dependencies]
+tempfile = "3"
+argon2 = "0.5"
+reqwest = { workspace = true }

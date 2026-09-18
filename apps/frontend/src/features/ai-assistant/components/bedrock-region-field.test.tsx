@@ -7,7 +7,12 @@ vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => k
 describe("Bedrock region settings", () => {
   it("preserves the region from a previously saved Runtime URL", () => {
     const save = vi.fn();
-    render(<BedrockRegionField url="https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1" onSave={save} />);
+    render(
+      <BedrockRegionField
+        url="https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1"
+        onSave={save}
+      />,
+    );
     expect(screen.getByRole("textbox")).toHaveValue("us-east-1");
     fireEvent.click(screen.getByRole("button"));
     expect(save).toHaveBeenCalledWith("https://bedrock-mantle.us-east-1.api.aws/v1");

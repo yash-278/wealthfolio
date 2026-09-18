@@ -11,6 +11,7 @@ expression: result
       "currency": "USD",
       "displayCode": "APLE",
       "exchangeMic": "XNYS",
+      "instrumentType": "EQUITY",
       "label": "APLE - Apple Hospitality REIT",
       "matchedBy": "name_fuzzy",
       "name": "Apple Hospitality REIT",

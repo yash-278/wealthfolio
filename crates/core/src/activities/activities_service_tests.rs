@@ -7973,6 +7973,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "AZN".to_string(),
@@ -8049,6 +8050,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2026-06-30".to_string(),
             symbol: "KWEB".to_string(),
@@ -8124,6 +8126,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2026-06-30".to_string(),
             symbol: "KWEB".to_string(),
@@ -8190,6 +8193,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2026-06-30".to_string(),
             symbol: "VOD.L".to_string(),
@@ -8263,6 +8267,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2026-06-30".to_string(),
             symbol: "VOD.L".to_string(),
@@ -8336,6 +8341,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2026-06-30".to_string(),
             symbol: "VOD.L".to_string(),
@@ -8419,6 +8425,7 @@ mod tests {
 
         let checked = activity_service
             .check_activities_import(vec![ActivityImport {
+                bank_reference: None,
                 id: None,
                 date: "2026-07-15".to_string(),
                 symbol: "ZFL".to_string(),
@@ -8519,6 +8526,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "ZFL".to_string(),
@@ -8615,6 +8623,7 @@ mod tests {
 
         let imports = vec![
             ActivityImport {
+                bank_reference: None,
                 id: None,
                 date: "2024-01-15".to_string(),
                 symbol: "SHOP".to_string(),
@@ -8650,6 +8659,7 @@ mod tests {
                 is_external: None,
             },
             ActivityImport {
+                bank_reference: None,
                 id: None,
                 date: "2024-01-15".to_string(),
                 symbol: "SHOP".to_string(),
@@ -8733,6 +8743,7 @@ mod tests {
         );
 
         let nyse = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "SHOP".to_string(),
@@ -8803,6 +8814,7 @@ mod tests {
         );
 
         let first = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "XAU".to_string(),
@@ -9051,6 +9063,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "AZN".to_string(),
@@ -9125,6 +9138,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "MSF.DE".to_string(),
@@ -9192,6 +9206,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "VOD.L".to_string(),
@@ -9266,6 +9281,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "BRK.B".to_string(),
@@ -9337,6 +9353,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "AZN".to_string(),
@@ -9405,6 +9422,7 @@ mod tests {
 
         // ".XC" suffix resolves to Cboe UK MIC and provider quote currency.
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "VWRPL.XC".to_string(),
@@ -9479,6 +9497,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "CUSTOM".to_string(),
@@ -9561,6 +9580,7 @@ mod tests {
 
         // Import activity for earlier created manual asset without `quote_mode` set
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "CUSTOM".to_string(),
@@ -9633,6 +9653,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "BTC-USD".to_string(),
@@ -9701,6 +9722,7 @@ mod tests {
         );
 
         let unresolved = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "VWRPL.XC".to_string(),
@@ -9775,6 +9797,7 @@ mod tests {
         );
 
         let drip = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: String::new(),
@@ -9845,6 +9868,7 @@ mod tests {
         );
 
         let dividend_in_kind = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: String::new(),
@@ -9915,6 +9939,7 @@ mod tests {
         );
 
         let staking_reward = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "ETH".to_string(),
@@ -9985,6 +10010,7 @@ mod tests {
         );
 
         let mismatched_subtype = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "AAPL".to_string(),
@@ -10052,6 +10078,7 @@ mod tests {
         );
 
         let option_buy = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "AAPL251219C00200000".to_string(),
@@ -10120,6 +10147,7 @@ mod tests {
         );
 
         let cash_dividend = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: String::new(),
@@ -10190,6 +10218,7 @@ mod tests {
         );
 
         let cash_dividend = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: String::new(),
@@ -10269,6 +10298,7 @@ mod tests {
         );
 
         let resolved = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "VWRPL".to_string(),
@@ -10344,6 +10374,7 @@ mod tests {
         let checked = activity_service
             .check_activities_import(vec![
                 ActivityImport {
+                    bank_reference: None,
                     id: None,
                     date: "2026-05-02".to_string(),
                     symbol: String::new(),
@@ -10379,6 +10410,7 @@ mod tests {
                     is_external: None,
                 },
                 ActivityImport {
+                    bank_reference: None,
                     id: None,
                     date: "2026-05-03".to_string(),
                     symbol: "AAPL".to_string(),
@@ -11098,6 +11130,7 @@ mod tests {
         );
 
         let manual_row = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "VWRPL".to_string(),
@@ -11181,6 +11214,7 @@ mod tests {
         );
 
         let invalid_date_row = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "1969-12-31".to_string(),
             symbol: "VWRPL".to_string(),
@@ -11256,6 +11290,7 @@ mod tests {
         );
 
         let cash_row = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: String::new(),
@@ -11327,6 +11362,7 @@ mod tests {
         );
 
         let activity = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2026-01-07".to_string(),
             symbol: String::new(),
@@ -11406,6 +11442,7 @@ mod tests {
         );
 
         let transfer_out = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2025-12-31".to_string(),
             symbol: String::new(),
@@ -11442,6 +11479,7 @@ mod tests {
         };
 
         let transfer_in = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2025-12-31T23:30:00-05:00".to_string(),
             symbol: String::new(),
@@ -11549,6 +11587,7 @@ mod tests {
         );
 
         let transfer_out = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2025-12-31".to_string(),
             symbol: String::new(),
@@ -11585,6 +11624,7 @@ mod tests {
         };
 
         let transfer_in = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2025-12-31".to_string(),
             symbol: String::new(),
@@ -11671,6 +11711,7 @@ mod tests {
         );
 
         let transfer_in = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2026-01-07".to_string(),
             symbol: String::new(),
@@ -11707,6 +11748,7 @@ mod tests {
         };
 
         let transfer_out = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2026-01-07".to_string(),
             symbol: String::new(),
@@ -11829,6 +11871,7 @@ mod tests {
         );
 
         let cash_transfer = |activity_type: &str, currency: &str, amount: Decimal| ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2026-01-07".to_string(),
             symbol: String::new(),
@@ -11962,6 +12005,7 @@ mod tests {
         );
 
         let transfer_out = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2025-12-31".to_string(),
             symbol: String::new(),
@@ -11998,6 +12042,7 @@ mod tests {
         };
 
         let transfer_in_duplicate = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2025-12-31".to_string(),
             symbol: String::new(),
@@ -12935,6 +12980,7 @@ mod tests {
             Arc::new(MockQuoteService),
         );
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15T06:11:20+00:00".to_string(),
             symbol: "CUSTOM".to_string(),
@@ -13186,6 +13232,7 @@ mod tests {
         );
 
         let duplicate = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "VWRL".to_string(),
@@ -13261,6 +13308,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "VWRL".to_string(),
@@ -13400,6 +13448,7 @@ mod tests {
         );
 
         let forced = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "VWRL".to_string(),
@@ -13492,6 +13541,7 @@ mod tests {
         );
 
         let base = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "VWRL".to_string(),
@@ -13590,6 +13640,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "VWRL".to_string(),
@@ -13969,6 +14020,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-06-01".to_string(),
             symbol: "US912828ZT58".to_string(),
@@ -14038,6 +14090,7 @@ mod tests {
         );
 
         let resolved = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-06-01".to_string(),
             symbol: "US912828ZT58".to_string(),
@@ -14107,6 +14160,7 @@ mod tests {
 
         for alias in &["FIXEDINCOME", "FIXED_INCOME", "DEBT"] {
             let resolved = ActivityImport {
+                bank_reference: None,
                 id: None,
                 date: "2024-06-01".to_string(),
                 symbol: "US912828ZT58".to_string(),
@@ -14188,6 +14242,7 @@ mod tests {
 
         // Import with explicit BOND instrument_type; name/ccy should be enriched from asset
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-06-01".to_string(),
             symbol: "US912828ZT58".to_string(),
@@ -14270,6 +14325,7 @@ mod tests {
 
         // AAPL Sep 18, 2026 $200 Call (OCC format)
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2026-03-01".to_string(),
             symbol: "AAPL260918C00200000".to_string(),
@@ -14340,6 +14396,7 @@ mod tests {
 
         // SPY June 19, 2026 $580 Put (OCC format)
         let resolved = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2026-03-01".to_string(),
             symbol: "SPY260619P00580000".to_string(),
@@ -14419,6 +14476,7 @@ mod tests {
         );
 
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2026-04-01".to_string(),
             symbol: "AAPL260918C00200000".to_string(),
@@ -14939,6 +14997,7 @@ mod tests {
             event => panic!("expected ActivitiesChanged, got {event:?}"),
         }
     }
+
     // ───────────────────────────────────────────────────────────────────
     // Import writer-boundary policy — one test per policy-table behavior,
     // through the REAL entry point (`import_activities`), asserting the
@@ -14948,6 +15007,7 @@ mod tests {
 
     fn qa_import_row(account_id: &str, activity_type: &str, currency: &str) -> ActivityImport {
         ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-02-01".to_string(),
             symbol: String::new(),
@@ -15279,5 +15339,111 @@ mod tests {
             .sum();
         // 1000 - 505 + 296 - 9.99
         assert_eq!(booked, dec!(781.01));
+    }
+
+    fn seed_internal_cash_transfer_pair(
+        activity_repository: &MockActivityRepository,
+        group_id: &str,
+    ) {
+        for (id, account_id, activity_type) in [
+            ("pair-out", "acc-a", "TRANSFER_OUT"),
+            ("pair-in", "acc-b", "TRANSFER_IN"),
+        ] {
+            let mut activity = create_cash_transfer_activity(
+                id,
+                account_id,
+                activity_type,
+                "2024-01-17T00:00:00Z",
+                dec!(100),
+                "USD",
+            );
+            activity.source_group_id = Some(group_id.to_string());
+            activity.metadata = Some(json!({ "flow": { "is_external": false } }));
+            activity_repository.add_activity(activity);
+        }
+    }
+
+    fn build_transfer_pair_service(
+        activity_repository: Arc<MockActivityRepository>,
+    ) -> ActivityService {
+        ActivityService::new(
+            activity_repository,
+            Arc::new(MockAccountService::new()),
+            Arc::new(MockAssetService::new()),
+            Arc::new(MockFxService::new()),
+            Arc::new(MockQuoteService),
+        )
+    }
+
+    #[tokio::test]
+    async fn test_get_transfer_pair_returns_pair_for_linked_activity() {
+        let activity_repository = Arc::new(MockActivityRepository::new());
+        seed_internal_cash_transfer_pair(&activity_repository, "group-internal");
+        let activity_service = build_transfer_pair_service(activity_repository);
+
+        let pair = activity_service
+            .get_transfer_pair_for_activity("pair-in".to_string())
+            .expect("lookup should succeed")
+            .expect("linked activity should resolve to a pair");
+
+        assert_eq!(pair.transfer_out.id, "pair-out");
+        assert_eq!(pair.transfer_in.id, "pair-in");
+    }
+
+    #[tokio::test]
+    async fn test_get_transfer_pair_returns_none_for_unpaired_activity() {
+        let activity_repository = Arc::new(MockActivityRepository::new());
+        activity_repository.add_activity(create_cash_transfer_activity(
+            "lonely-out",
+            "acc-a",
+            "TRANSFER_OUT",
+            "2024-01-17T00:00:00Z",
+            dec!(100),
+            "USD",
+        ));
+        let activity_service = build_transfer_pair_service(activity_repository);
+
+        let pair = activity_service
+            .get_transfer_pair_for_activity("lonely-out".to_string())
+            .expect("unpaired activity should not be an error");
+
+        assert!(pair.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_transfer_pair_returns_none_for_grouped_external_transfer() {
+        let activity_repository = Arc::new(MockActivityRepository::new());
+        for (id, account_id, activity_type) in [
+            ("external-out", "acc-a", "TRANSFER_OUT"),
+            ("external-in", "acc-b", "TRANSFER_IN"),
+        ] {
+            let mut activity = create_cash_transfer_activity(
+                id,
+                account_id,
+                activity_type,
+                "2024-01-17T00:00:00Z",
+                dec!(100),
+                "USD",
+            );
+            activity.source_group_id = Some("group-external".to_string());
+            activity_repository.add_activity(activity);
+        }
+        let activity_service = build_transfer_pair_service(activity_repository);
+
+        let pair = activity_service
+            .get_transfer_pair_for_activity("external-in".to_string())
+            .expect("external pair should not be an error");
+
+        assert!(pair.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_transfer_pair_errors_for_unknown_activity() {
+        let activity_repository = Arc::new(MockActivityRepository::new());
+        let activity_service = build_transfer_pair_service(activity_repository);
+
+        let result = activity_service.get_transfer_pair_for_activity("missing".to_string());
+
+        assert!(result.is_err());
     }
 }

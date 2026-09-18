@@ -22,10 +22,10 @@ existing financial tools. No gateway or extra Railway service is required.
    before asking a question about your accounts.
 
 The region creates an endpoint in this form:
-`https://bedrock-mantle.REGION.api.aws/v1`. Only HTTPS regional
-AWS Mantle endpoints are used. Saved Runtime URLs are normalized to Mantle in
-the same region. Custom proxies, China endpoints,
-SigV4 and AWS profiles are outside this implementation.
+`https://bedrock-mantle.REGION.api.aws/v1`. Only HTTPS regional AWS Mantle
+endpoints are used. Saved Runtime URLs are normalized to Mantle in the same
+region. Custom proxies, China endpoints, SigV4 and AWS profiles are outside this
+implementation.
 
 ## Credentials and usage
 
@@ -47,9 +47,9 @@ hosting. The provider starts disabled. Requests do not switch to OpenAI or a
 different provider after failure. Chat titles use the selected Bedrock chat
 model, so title generation can also incur AWS usage.
 
-Replace an expired key in Settings or Railway, depending on where you configured it.
-If both are configured, removing the saved key exposes the environment fallback.
-Remove both keys or disable the provider to stop using Bedrock.
+Replace an expired key in Settings or Railway, depending on where you configured
+it. If both are configured, removing the saved key exposes the environment
+fallback. Remove both keys or disable the provider to stop using Bedrock.
 Changing the region or key clears cached model discovery. HTTP 401/403 errors
 from discovery point to key expiry or access; 429 means AWS throttling.
 Discovery has a 30-second timeout. A successful model-list request alone does
@@ -61,11 +61,11 @@ Local tests cover region validation, credential isolation and removal, missing
 configuration, and OpenAI-compatible streaming text and tool-call assembly. They
 use synthetic credentials and a local HTTP fixture, not AWS.
 
-Before enabling the provider, verify a model-list request and a synthetic streamed
-chat with your AWS account, then an account-read tool call. Confirm denied model
-access and expired credentials produce errors. Back up Wealthfolio's persistent
-volume before replacing its application image. No database migration is required
-by this provider change.
+Before enabling the provider, verify a model-list request and a synthetic
+streamed chat with your AWS account, then an account-read tool call. Confirm
+denied model access and expired credentials produce errors. Back up
+Wealthfolio's persistent volume before replacing its application image. No
+database migration is required by this provider change.
 
 ## Sources
 
@@ -77,9 +77,17 @@ Implementation baseline: Wealthfolio v3.8.0, commit
 
 ## Railway build
 
-The Docker build uses four compiler jobs, release mode with workspace optimization
-level 0, and dependency optimization level 1. Two higher-optimization builds ended
-after approximately 20 minutes without a compiler diagnosis; this configuration
-completed in 11m 05s. Runtime performance under heavier workloads is unmeasured.
-Railway supplies the existing persistent volume at `/data`; the Dockerfile does
-not declare a Docker-managed volume.
+The Docker build uses four compiler jobs, release mode with workspace
+optimization level 0, and dependency optimization level 1. Two
+higher-optimization builds ended after approximately 20 minutes without a
+compiler diagnosis; this configuration completed in 11m 05s. Runtime performance
+under heavier workloads is unmeasured. Railway supplies the existing persistent
+volume at `/data`; the Dockerfile does not declare a Docker-managed volume.
+
+## Model protocols
+
+Mantle discovery includes models with different APIs. Claude uses Anthropic
+Messages; OpenAI models other than GPT-OSS use Responses; GPT-OSS and other
+OpenAI-compatible families use Chat Completions. Both chat and title generation
+select the same protocol. Responses requests explicitly disable server storage.
+No failed request is retried against another model or provider.

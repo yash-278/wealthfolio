@@ -874,6 +874,7 @@ mod tests {
     #[test]
     fn test_activity_import_to_new_activity_preserves_asset_resolution_inputs() {
         let import = ActivityImport {
+            bank_reference: None,
             id: Some("imp-1".to_string()),
             date: "2024-01-15".to_string(),
             symbol: "AZN".to_string(),
@@ -924,6 +925,7 @@ mod tests {
         // Regression: issue #927 — external transfer from CSV import was losing the
         // `is_external` flag because `From<ActivityImport>` hard-coded `metadata: None`.
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "AAPL".to_string(),
@@ -969,6 +971,7 @@ mod tests {
     fn test_activity_import_to_new_activity_preserves_credit_boundary_metadata() {
         for (subtype, is_external) in [("REFUND", true), ("BONUS", false)] {
             let import = ActivityImport {
+                bank_reference: None,
                 id: None,
                 date: "2024-01-15".to_string(),
                 symbol: String::new(),
@@ -1018,6 +1021,7 @@ mod tests {
     #[test]
     fn test_activity_import_to_new_activity_omits_metadata_when_not_external() {
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "AAPL".to_string(),
@@ -1059,6 +1063,7 @@ mod tests {
     #[test]
     fn test_activity_import_to_new_activity_ignores_external_flag_for_non_transfers() {
         let import = ActivityImport {
+            bank_reference: None,
             id: None,
             date: "2024-01-15".to_string(),
             symbol: "AAPL".to_string(),

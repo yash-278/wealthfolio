@@ -56,6 +56,9 @@ jobs:
       - name: Run net worth layout regression tests
         run: pnpm test:e2e:net-worth
 
+      - name: Run mobile UI browser tests
+        run: pnpm exec playwright test --config playwright.mobile-ui.config.ts
+
       - name: Run addon sandbox browser tests
         run: pnpm test:e2e:addon-sandbox
         env:

@@ -124,7 +124,7 @@ export function SwipableView({
   const shouldRender = (index: number) => Math.abs(selectedIndex - index) <= 1;
 
   return (
-    <div className={cn("relative flex h-full w-full flex-col", className)}>
+    <div className={cn("relative flex h-full min-h-0 w-full flex-col", className)}>
       {/* Navigation Toggle */}
       {displayToggle && items.length > 1 && (
         <div className="flex shrink-0 items-center justify-center gap-3 py-2.5">
@@ -165,7 +165,7 @@ export function SwipableView({
       )}
 
       {/* Swipable Content */}
-      <div ref={emblaRef} className="h-full grow overflow-hidden">
+      <div ref={emblaRef} className="min-h-0 flex-1 overflow-hidden">
         <div
           className="flex h-full touch-pan-y"
           style={{

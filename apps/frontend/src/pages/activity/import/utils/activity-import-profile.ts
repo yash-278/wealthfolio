@@ -77,6 +77,7 @@ const TRANSACTION_MAPPING_FIELDS = [
   ImportFormat.FEE,
   ImportFormat.TAX,
   ImportFormat.COMMENT,
+  ImportFormat.BANK_REFERENCE,
   ImportFormat.FX_RATE,
   ImportFormat.SUBTYPE,
 ] as const;

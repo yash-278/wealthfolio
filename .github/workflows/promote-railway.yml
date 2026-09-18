@@ -1,0 +1,76 @@
+name: Promote Railway image
+
+on:
+  workflow_call:
+    secrets:
+      RAILWAY_TOKEN:
+        required: true
+    inputs:
+      digest:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      digest:
+        description: Tested GHCR image digest (sha256 followed by 64 hex characters)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: railway-production
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: github.repository == 'yash-278/wealthfolio'
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 15
+    steps:
+      - name: Check deployment credential
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          test -n "$RAILWAY_TOKEN" || { echo 'Configure the repository secret RAILWAY_TOKEN first.'; exit 1; }
+      - name: Validate immutable image
+        env:
+          DIGEST: ${{ inputs.digest }}
+        run: |
+          [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]] || exit 1
+          docker pull "ghcr.io/yash-278/wealthfolio@$DIGEST"
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli@5.37.6
+      - name: Promote tested image
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          DIGEST: ${{ inputs.digest }}
+        run: |
+          set -euo pipefail
+          test -n "$RAILWAY_TOKEN" || { echo 'Configure the repository secret RAILWAY_TOKEN first.'; exit 1; }
+          previous_id="$(railway deployment list --project 85786670-5d73-45f3-b3b1-dfa3639ec316 --environment eb42188b-57ff-4765-af9c-4c9e74a5827e --service f459814c-b3e5-438c-8400-8bc53eba1bfd --limit 1 --json | jq -r '.[0].id')"
+          printf 'Previous deployment: `%s`\n' "$previous_id" >> "$GITHUB_STEP_SUMMARY"
+          railway service source connect \
+            --project 85786670-5d73-45f3-b3b1-dfa3639ec316 \
+            --environment eb42188b-57ff-4765-af9c-4c9e74a5827e \
+            --service f459814c-b3e5-438c-8400-8bc53eba1bfd \
+            --image "ghcr.io/yash-278/wealthfolio@$DIGEST"
+          railway redeploy --from-source --project 85786670-5d73-45f3-b3b1-dfa3639ec316 --service f459814c-b3e5-438c-8400-8bc53eba1bfd \
+            --environment eb42188b-57ff-4765-af9c-4c9e74a5827e --yes
+          for attempt in $(seq 1 90); do
+            current="$(railway deployment list --project 85786670-5d73-45f3-b3b1-dfa3639ec316 --environment eb42188b-57ff-4765-af9c-4c9e74a5827e --service f459814c-b3e5-438c-8400-8bc53eba1bfd --limit 1 --json)"
+            status="$(jq -r '.[0].status' <<< "$current")"
+            current_id="$(jq -r '.[0].id' <<< "$current")"
+            if [[ "$current_id" = "$previous_id" ]]; then sleep 5; continue; fi
+            case "$status" in
+              SUCCESS) break ;;
+              FAILED|CRASHED|REMOVED) echo "Deployment $status"; exit 1 ;;
+            esac
+            sleep 5
+          done
+          test "$current_id" != "$previous_id"
+          test "$status" = SUCCESS
+          curl --fail --silent --show-error https://wealthfolio-production-d99b.up.railway.app/api/v1/healthz
+          printf 'Promoted image: `ghcr.io/yash-278/wealthfolio@%s`\n' "$DIGEST" >> "$GITHUB_STEP_SUMMARY"

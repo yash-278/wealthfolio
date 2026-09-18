@@ -550,6 +550,7 @@ impl AiProviderServiceTrait for AiProviderService {
         let base_url = config.base_url.as_deref().unwrap_or(match provider_id {
             "anthropic" => "https://api.anthropic.com",
             "openai" => "https://api.openai.com",
+            "bedrock" => crate::bedrock::DEFAULT_URL,
             "groq" => "https://api.groq.com/openai",
             "openrouter" => "https://openrouter.ai/api",
             "google" => "https://generativelanguage.googleapis.com",

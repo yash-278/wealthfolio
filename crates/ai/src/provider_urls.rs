@@ -25,6 +25,10 @@ pub(crate) fn validate_bedrock_url(value: Option<&str>) -> Result<String, String
     let invalid =
         || "Choose an AWS region in Amazon Bedrock settings before connecting.".to_string();
     let url = reqwest::Url::parse(value.ok_or_else(invalid)?).map_err(|_| invalid())?;
+    #[cfg(any(test, feature = "test-utils"))]
+    if url.scheme() == "http" && url.host_str() == Some("127.0.0.1") {
+        return Ok(url.to_string().trim_end_matches('/').to_string());
+    }
     let host = url.host_str().ok_or_else(invalid)?;
     // Normalize URLs saved by the first provider release without changing region.
     let (region, path) = if let Some(region) = host

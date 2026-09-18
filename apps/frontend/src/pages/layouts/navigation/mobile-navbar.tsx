@@ -1,3 +1,4 @@
+import { NativeGlassControls, nativeNavigationSymbol } from "@/components/native-glass-controls";
 import { LiquidGlass } from "@/components/liquid-glass";
 import { SyncStatusIcon } from "@/features/wealthfolio-connect/components/sync-status-icon";
 import { useAggregatedSyncStatus } from "@/features/wealthfolio-connect/hooks";
@@ -29,6 +30,19 @@ export function MobileNavBar({ navigation }: MobileNavBarProps) {
   const handleNavigation = useCallback(
     (href: string, isActive: boolean) => {
       if (isActive) return;
+      if (href === "#search") {
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "k",
+            code: "KeyK",
+            metaKey: true,
+            ctrlKey: true,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+        return;
+      }
       triggerHaptic();
       navigate(href);
     },
@@ -41,25 +55,14 @@ export function MobileNavBar({ navigation }: MobileNavBarProps) {
   const secondaryItems = navigation?.secondary ?? [];
   const pinnedAddonItems = navigation?.pinnedAddons ?? [];
   const addonMenuItems = navigation?.addonMenuItems ?? navigation?.addons ?? [];
-  const directPinnedAddonItems = pinnedAddonItems.slice(0, 1);
-  const overflowPinnedAddonItems = pinnedAddonItems.slice(1);
-
-  const searchItem = {
-    title: t("common:search"),
-    href: "#search",
-    icon: <Icons.Search2 className="size-6" />,
-  };
-
-  const visibleItems = [
-    primaryItems[0],
-    primaryItems[1],
-    ...directPinnedAddonItems,
-    searchItem,
-  ].filter(Boolean);
-
-  const addonItems = [...overflowPinnedAddonItems, ...addonMenuItems];
+  const visibleRoutes = ["/dashboard", "/activities", "/insights", "/assistant"];
+  const visibleItems = visibleRoutes.flatMap((href) =>
+    primaryItems.filter((item) => item.href === href),
+  );
+  const addonItems = [...pinnedAddonItems, ...addonMenuItems];
   const standardMenuItems: NavLink[] = [
-    ...primaryItems.slice(2),
+    ...primaryItems.filter((item) => !visibleRoutes.includes(item.href)),
+    { title: t("common:search"), href: "#search", icon: <Icons.Search2 className="size-6" /> },
     ...secondaryItems,
     {
       title: t("common:connect"),
@@ -75,48 +78,126 @@ export function MobileNavBar({ navigation }: MobileNavBarProps) {
     <div className={containerClassName}>
       {/* Lift off bottom by the design gap while respecting safe area */}
       <div className="flex justify-center px-4 pb-[var(--mobile-nav-bottom-offset)]">
-        <LiquidGlass
-          variant="floating"
-          intensity="subtle"
-          className={cn("pointer-events-auto w-full px-1 py-1", "h-[var(--mobile-nav-ui-height)]")}
+        <NativeGlassControls
+          className="w-full"
+          labels
+          items={[
+            ...visibleItems.map((item) => ({
+              id: item.href,
+              title: item.title,
+              symbol:
+                item.href === "#search" ? "magnifyingglass" : nativeNavigationSymbol(item.href),
+              selected: isPathActive(location.pathname, item.href),
+            })),
+            ...(hasMenu
+              ? [
+                  {
+                    id: "more",
+                    title: t("common:layout.more"),
+                    symbol: "square.grid.2x2",
+                    children: moreItems.map((item) => ({
+                      id: item.href,
+                      title: item.title,
+                      symbol:
+                        item.href === "#search"
+                          ? "magnifyingglass"
+                          : nativeNavigationSymbol(item.href),
+                    })),
+                  },
+                ]
+              : []),
+          ]}
+          onAction={(id) => {
+            if (id === "#search") {
+              document.dispatchEvent(
+                new KeyboardEvent("keydown", {
+                  key: "k",
+                  code: "KeyK",
+                  metaKey: true,
+                  ctrlKey: true,
+                  bubbles: true,
+                  cancelable: true,
+                }),
+              );
+            } else handleNavigation(id, isPathActive(location.pathname, id));
+          }}
         >
-          <nav
-            aria-label={t("common:layout.primary_navigation")}
-            className={cn("grid place-items-center gap-2")}
-            style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}
+          <LiquidGlass
+            variant="floating"
+            intensity="subtle"
+            className={cn(
+              "pointer-events-auto w-full px-1 py-1",
+              "h-[var(--mobile-nav-ui-height)]",
+            )}
           >
-            {visibleItems.map((item) => {
-              const isActive = isPathActive(location.pathname, item.href);
-              const isSearch = item.href === "#search";
+            <nav
+              aria-label={t("common:layout.primary_navigation")}
+              className={cn("grid place-items-center gap-2")}
+              style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}
+            >
+              {visibleItems.map((item) => {
+                const isActive = isPathActive(location.pathname, item.href);
+                const isSearch = item.href === "#search";
 
-              return (
-                <Link
-                  to={item.href}
-                  onClick={(e) => {
-                    if (isSearch) {
-                      e.preventDefault();
-                      triggerHaptic();
-                      const event = new KeyboardEvent("keydown", {
-                        key: "k",
-                        code: "KeyK",
-                        keyCode: 75,
-                        which: 75,
-                        metaKey: true,
-                        ctrlKey: true,
-                        bubbles: true,
-                        cancelable: true,
-                      });
-                      document.dispatchEvent(event);
-                    } else {
-                      handleNavigation(item.href, isActive);
-                    }
+                return (
+                  <Link
+                    to={item.href}
+                    onClick={(e) => {
+                      if (isSearch) {
+                        e.preventDefault();
+                        triggerHaptic();
+                        const event = new KeyboardEvent("keydown", {
+                          key: "k",
+                          code: "KeyK",
+                          keyCode: 75,
+                          which: 75,
+                          metaKey: true,
+                          ctrlKey: true,
+                          bubbles: true,
+                          cancelable: true,
+                        });
+                        document.dispatchEvent(event);
+                      } else {
+                        handleNavigation(item.href, isActive);
+                      }
+                    }}
+                    aria-label={item.title}
+                    className="text-foreground relative z-10 flex h-14 w-full items-center justify-center rounded-full transition-colors"
+                    key={item.href}
+                    aria-current={isActive ? "page" : undefined}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId={`mobile-nav-indicator-${uniqueId}`}
+                        className="absolute inset-0 -z-10 rounded-full border border-black/10 bg-black/5 shadow-sm dark:border-white/10 dark:bg-white/10"
+                        initial={false}
+                        transition={{
+                          type: "spring",
+                          stiffness: 400,
+                          damping: 30,
+                        }}
+                      />
+                    )}
+                    <span
+                      className="relative flex size-7 shrink-0 items-center justify-center outline-none"
+                      aria-hidden="true"
+                    >
+                      {renderIcon(item.icon)}
+                    </span>
+                  </Link>
+                );
+              })}
+
+              {hasMenu && (
+                <button
+                  onClick={() => {
+                    triggerHaptic();
+                    setMobileMenuOpen(true);
                   }}
-                  aria-label={item.title}
+                  aria-label={t("common:layout.more_options")}
                   className="text-foreground relative z-10 flex h-14 w-full items-center justify-center rounded-full transition-colors"
-                  key={item.href}
-                  aria-current={isActive ? "page" : undefined}
                 >
-                  {isActive && (
+                  {moreItems.some((item) => isPathActive(location.pathname, item.href)) && (
                     <motion.div
                       layoutId={`mobile-nav-indicator-${uniqueId}`}
                       className="absolute inset-0 -z-10 rounded-full border border-black/10 bg-black/5 shadow-sm dark:border-white/10 dark:bg-white/10"
@@ -132,43 +213,13 @@ export function MobileNavBar({ navigation }: MobileNavBarProps) {
                     className="relative flex size-7 shrink-0 items-center justify-center outline-none"
                     aria-hidden="true"
                   >
-                    {renderIcon(item.icon)}
+                    <Icons.CirclesFour className="size-6" />
                   </span>
-                </Link>
-              );
-            })}
-
-            {hasMenu && (
-              <button
-                onClick={() => {
-                  triggerHaptic();
-                  setMobileMenuOpen(true);
-                }}
-                aria-label={t("common:layout.more_options")}
-                className="text-foreground relative z-10 flex h-14 w-full items-center justify-center rounded-full transition-colors"
-              >
-                {moreItems.some((item) => isPathActive(location.pathname, item.href)) && (
-                  <motion.div
-                    layoutId={`mobile-nav-indicator-${uniqueId}`}
-                    className="absolute inset-0 -z-10 rounded-full border border-black/10 bg-black/5 shadow-sm dark:border-white/10 dark:bg-white/10"
-                    initial={false}
-                    transition={{
-                      type: "spring",
-                      stiffness: 400,
-                      damping: 30,
-                    }}
-                  />
-                )}
-                <span
-                  className="relative flex size-7 shrink-0 items-center justify-center outline-none"
-                  aria-hidden="true"
-                >
-                  <Icons.CirclesFour className="size-6" />
-                </span>
-              </button>
-            )}
-          </nav>
-        </LiquidGlass>
+                </button>
+              )}
+            </nav>
+          </LiquidGlass>
+        </NativeGlassControls>
       </div>
 
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>

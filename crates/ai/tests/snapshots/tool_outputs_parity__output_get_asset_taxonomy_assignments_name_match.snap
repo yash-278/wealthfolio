@@ -32,6 +32,7 @@ expression: result
       "currency": "USD",
       "displayCode": "AAPL",
       "exchangeMic": "XNAS",
+      "instrumentType": "EQUITY",
       "label": "AAPL - Apple Inc.",
       "matchedBy": "name",
       "name": "Apple Inc.",

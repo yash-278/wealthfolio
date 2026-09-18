@@ -52,6 +52,12 @@ export default function SettingsLayout() {
             icon: <Icons.TrendingUp className="size-5" />,
           },
           {
+            title: "Quick Add",
+            href: "quick-add",
+            subtitle: "Transaction capture and review",
+            icon: <Icons.Activity className="size-5" />,
+          },
+          {
             title: t("settings:nav.items.spending"),
             href: "spending",
             subtitle: t("settings:nav.subtitles.spending"),
@@ -85,6 +91,12 @@ export default function SettingsLayout() {
       {
         title: t("settings:nav.sections.connections"),
         items: [
+          {
+            title: "Your server",
+            href: "server-sync",
+            subtitle: "Sync with your own Wealthfolio server",
+            icon: <Icons.CloudSync2 className="size-5" />,
+          },
           {
             title: t("settings:nav.items.connect"),
             href: "connect",

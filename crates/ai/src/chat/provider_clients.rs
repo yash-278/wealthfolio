@@ -69,8 +69,22 @@ pub(crate) fn create_openai_client(
     provider_id: &str,
     provider_url: Option<String>,
 ) -> Result<openai::CompletionsClient<HttpClient>, AiError> {
+    let provider_url = if provider_id == "bedrock" {
+        let url = validate_bedrock_url(provider_url.as_deref()).map_err(AiError::InvalidInput)?;
+        Some(url)
+    } else {
+        provider_url
+    };
     let key = api_key.ok_or_else(|| AiError::MissingApiKey(provider_id.to_string()))?;
     let mut builder = openai::CompletionsClient::builder().api_key(&key);
+    if provider_id == "bedrock" {
+        builder = builder.http_client(
+            HttpClient::builder()
+                .redirect(reqwest::redirect::Policy::none())
+                .build()
+                .map_err(|e| AiError::Provider(e.to_string()))?,
+        );
+    }
     if let Some(url) = provider_url {
         let normalized = ensure_openai_v1_base_url(&url);
         builder = builder.base_url(&normalized);
@@ -86,6 +100,70 @@ pub(crate) fn create_bedrock_client(
 ) -> Result<openai::CompletionsClient<HttpClient>, AiError> {
     let url = validate_bedrock_url(provider_url.as_deref()).map_err(AiError::InvalidInput)?;
     create_openai_client(api_key, "bedrock", Some(url))
+}
+
+/// Mantle serves different model families through different wire protocols.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) enum BedrockRoute {
+    Messages,
+    Responses,
+    Completions,
+}
+
+pub(crate) fn bedrock_route(model: &str) -> BedrockRoute {
+    if model.starts_with("anthropic.") {
+        BedrockRoute::Messages
+    } else if model.starts_with("openai.") && !model.starts_with("openai.gpt-oss-") {
+        BedrockRoute::Responses
+    } else {
+        BedrockRoute::Completions
+    }
+}
+
+pub(crate) fn create_bedrock_responses_client(
+    api_key: Option<String>,
+    provider_url: Option<String>,
+) -> Result<openai::Client<HttpClient>, AiError> {
+    let url = validate_bedrock_url(provider_url.as_deref()).map_err(AiError::InvalidInput)?;
+    let key = api_key.ok_or_else(|| AiError::MissingApiKey("bedrock".into()))?;
+    openai::Client::builder()
+        .api_key(key)
+        .base_url(format!("{}/openai/v1", url.trim_end_matches("/v1")))
+        .build()
+        .map_err(|e| AiError::Provider(e.to_string()))
+}
+
+pub(crate) fn create_bedrock_messages_client(
+    api_key: Option<String>,
+    provider_url: Option<String>,
+) -> Result<anthropic::Client<HttpClient>, AiError> {
+    let url = validate_bedrock_url(provider_url.as_deref()).map_err(AiError::InvalidInput)?;
+    create_anthropic_client(
+        api_key,
+        "bedrock",
+        Some(format!("{}/anthropic", url.trim_end_matches("/v1"))),
+    )
+}
+
+#[cfg(test)]
+mod route_tests {
+    use super::*;
+    #[test]
+    fn model_families_use_their_supported_protocol() {
+        assert_eq!(
+            bedrock_route("anthropic.claude-sonnet-5"),
+            BedrockRoute::Messages
+        );
+        assert_eq!(
+            bedrock_route("openai.gpt-5.6-luna"),
+            BedrockRoute::Responses
+        );
+        assert_eq!(
+            bedrock_route("openai.gpt-oss-120b"),
+            BedrockRoute::Completions
+        );
+        assert_eq!(bedrock_route("deepseek.v3.2"), BedrockRoute::Completions);
+    }
 }
 
 pub(crate) fn create_openrouter_client(
@@ -234,6 +312,23 @@ pub(super) async fn validate_ollama_model_if_possible(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn bedrock_clients_reject_non_aws_urls_and_missing_region() {
+        for url in [
+            "https://api.openai.com/v1",
+            "https://example.com/openai/v1",
+            "not a URL",
+        ] {
+            assert!(create_openai_client(
+                Some("synthetic-key".into()),
+                "bedrock",
+                Some(url.into())
+            )
+            .is_err());
+        }
+        assert!(create_openai_client(Some("synthetic-key".into()), "bedrock", None).is_err());
+    }
 
     #[test]
     fn test_openai_compatible_clients_normalize_base_url() {
@@ -400,5 +495,37 @@ mod bedrock_tests {
         let tool = tool.expect("completed tool call");
         assert_eq!(tool.function.name, "get_accounts");
         assert_eq!(tool.function.arguments, serde_json::json!({}));
+    }
+}
+
+#[cfg(test)]
+mod bedrock_live_routes {
+    use super::*;
+    use rig::{client::CompletionClient, completion::Prompt};
+    #[tokio::test]
+    #[ignore = "Requires explicit Bedrock test credentials and incurs inference usage"]
+    async fn messages_and_responses_accept_synthetic_prompts() {
+        let key = std::env::var("WF_BEDROCK_TEST_KEY").expect("test key required");
+        let url = std::env::var("WF_BEDROCK_TEST_URL").expect("test endpoint required");
+        let messages =
+            create_bedrock_messages_client(Some(key.clone()), Some(url.clone())).unwrap();
+        let reply = messages
+            .agent("anthropic.claude-sonnet-5")
+            .max_tokens(128)
+            .build()
+            .prompt("Reply only with OK.")
+            .await
+            .unwrap();
+        assert_eq!(reply.trim(), "OK");
+        let responses = create_bedrock_responses_client(Some(key), Some(url)).unwrap();
+        let reply = responses
+            .agent("openai.gpt-5.6-luna")
+            .max_tokens(1024)
+            .additional_params(serde_json::json!({"store": false}))
+            .build()
+            .prompt("Reply only with OK.")
+            .await
+            .unwrap();
+        assert_eq!(reply.trim(), "OK");
     }
 }

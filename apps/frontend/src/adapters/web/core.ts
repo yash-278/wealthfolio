@@ -27,6 +27,19 @@ const INVOKE_TIMEOUT_OVERRIDES_MS: Record<string, number> = {
 type CommandMap = Record<string, { method: string; path: string }>;
 
 export const COMMANDS: CommandMap = {
+  list_capture_tokens: { method: "GET", path: "/quick-add/tokens" },
+  create_capture_token: { method: "POST", path: "/quick-add/tokens" },
+  revoke_capture_token: { method: "DELETE", path: "/quick-add/tokens" },
+  get_capture_usage: { method: "GET", path: "/quick-add/usage" },
+  get_capture_settings: { method: "GET", path: "/quick-add/settings" },
+  update_capture_settings: { method: "PUT", path: "/quick-add/settings" },
+  get_capture_reviews: { method: "GET", path: "/capture-reviews" },
+  resolve_capture_review: { method: "POST", path: "/capture-reviews" },
+  dismiss_capture_review: { method: "POST", path: "/capture-reviews" },
+  submit_capture: { method: "POST", path: "/captures" },
+  retry_capture: { method: "POST", path: "/captures" },
+  clear_capture_source: { method: "DELETE", path: "/captures" },
+  get_capture: { method: "GET", path: "/captures" },
   get_accounts: { method: "GET", path: "/accounts" },
   create_account: { method: "POST", path: "/accounts" },
   update_account: { method: "PUT", path: "/accounts" },
@@ -468,6 +481,55 @@ export const invoke = async <T>(command: string, payload?: Record<string, unknow
   };
 
   switch (command) {
+    case "get_capture_reviews": {
+      const p = payload as { page: number; pageSize: number; reason?: string };
+      const params = new URLSearchParams({
+        page: String(p?.page ?? 0),
+        pageSize: String(p?.pageSize ?? 25),
+      });
+      if (p?.reason) params.set("reason", p.reason);
+      url += `?${params}`;
+      break;
+    }
+    case "create_capture_token": {
+      body = JSON.stringify(payload);
+      break;
+    }
+    case "revoke_capture_token": {
+      url += `/${encodeURIComponent((payload as { id: string }).id)}`;
+      break;
+    }
+    case "update_capture_settings": {
+      body = JSON.stringify((payload as { settings: unknown }).settings);
+      break;
+    }
+    case "resolve_capture_review": {
+      const data = payload as { id: string; resolution: unknown };
+      url += `/${encodeURIComponent(data.id)}/resolve`;
+      body = JSON.stringify(data.resolution);
+      break;
+    }
+    case "dismiss_capture_review": {
+      const data = payload as { id: string; version: number };
+      url += `/${encodeURIComponent(data.id)}/dismiss`;
+      body = JSON.stringify({ version: data.version });
+      break;
+    }
+    case "submit_capture": {
+      body = JSON.stringify((payload as { input: unknown }).input);
+      break;
+    }
+    case "retry_capture":
+    case "clear_capture_source": {
+      const data = payload as { id: string; version: number };
+      url += `/${encodeURIComponent(data.id)}/${command === "retry_capture" ? "retry" : "source"}`;
+      body = JSON.stringify({ version: data.version });
+      break;
+    }
+    case "get_capture": {
+      url += `/${encodeURIComponent((payload as { id: string }).id)}`;
+      break;
+    }
     case "update_account": {
       const data = payload as { accountUpdate: { id: string } & Record<string, unknown> };
       url += `/${data.accountUpdate.id}`;

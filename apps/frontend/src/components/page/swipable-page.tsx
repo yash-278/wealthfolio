@@ -1,3 +1,5 @@
+import { createPortal } from "react-dom";
+import { NativeGlassControls, nativeNavigationSymbol } from "@/components/native-glass-controls";
 import { useHapticFeedback, useIsMobileViewport } from "@/hooks";
 import { cn } from "@/lib/utils";
 import { Page, SwipableView, type Icon } from "@wealthfolio/ui";
@@ -101,53 +103,65 @@ function MobileNavigation({
   const layoutId = React.useId();
 
   return (
-    <div
-      className={cn(
-        "bg-muted/50 flex items-center gap-0.5 rounded-full p-1 backdrop-blur-sm",
-        compact && "min-w-0 max-w-full",
-      )}
+    <NativeGlassControls
+      items={views.map((view) => ({
+        id: view.value,
+        title: view.label,
+        symbol: nativeNavigationSymbol(view.value),
+        selected: currentView === view.value,
+      }))}
+      onAction={onViewChange}
     >
-      {views.map((item) => {
-        const isActive = currentView === item.value;
-        const IconComponent = item.icon;
+      <div
+        className={cn(
+          "bg-muted/50 flex items-center gap-0.5 rounded-full p-1 backdrop-blur-sm",
+          compact && "min-w-0 max-w-full",
+        )}
+      >
+        {views.map((item) => {
+          const isActive = currentView === item.value;
+          const IconComponent = item.icon;
 
-        return (
-          <button
-            key={item.value}
-            type="button"
-            onClick={() => onViewChange(item.value)}
-            className={cn(
-              "relative flex cursor-pointer items-center justify-center gap-1.5 rounded-full py-1.5 text-sm font-medium transition-colors duration-200",
-              "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-              compact ? "px-2" : "px-3",
-              isActive ? "min-w-0" : "shrink-0",
-              isActive ? "text-foreground" : "text-muted-foreground",
-            )}
-            aria-label={item.label}
-            aria-current={isActive ? "page" : undefined}
-          >
-            {isActive && (
-              <motion.div
-                layoutId={`mobile-nav-bg-${layoutId}`}
-                className="bg-background absolute inset-0 rounded-full shadow-sm"
-                initial={false}
-                transition={{
-                  type: "spring",
-                  stiffness: 500,
-                  damping: 35,
-                }}
-              />
-            )}
-            <span className={cn("relative z-10 flex items-center gap-1.5", compact && "min-w-0")}>
-              {IconComponent && <IconComponent className="size-4" />}
-              {isActive && (
-                <span className={cn("whitespace-nowrap", compact && "truncate")}>{item.label}</span>
+          return (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => onViewChange(item.value)}
+              className={cn(
+                "relative flex cursor-pointer items-center justify-center gap-1.5 rounded-full py-1.5 text-sm font-medium transition-colors duration-200",
+                "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                compact ? "px-2" : "px-3",
+                isActive ? "min-w-0" : "shrink-0",
+                isActive ? "text-foreground" : "text-muted-foreground",
               )}
-            </span>
-          </button>
-        );
-      })}
-    </div>
+              aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId={`mobile-nav-bg-${layoutId}`}
+                  className="bg-background absolute inset-0 rounded-full shadow-sm"
+                  initial={false}
+                  transition={{
+                    type: "spring",
+                    stiffness: 500,
+                    damping: 35,
+                  }}
+                />
+              )}
+              <span className={cn("relative z-10 flex items-center gap-1.5", compact && "min-w-0")}>
+                {IconComponent && <IconComponent className="size-4" />}
+                {isActive && (
+                  <span className={cn("whitespace-nowrap", compact && "truncate")}>
+                    {item.label}
+                  </span>
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </NativeGlassControls>
   );
 }
 
@@ -165,6 +179,17 @@ export function SwipablePage({
   persistKey,
 }: SwipablePageProps) {
   const isMobile = useIsMobileViewport();
+  const headerRef = React.useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = React.useState<number>();
+  React.useLayoutEffect(() => {
+    if (!isMobile || !headerRef.current) return;
+    const header = headerRef.current;
+    const measure = () => setHeaderHeight(header.getBoundingClientRect().height);
+    const observer = new ResizeObserver(measure);
+    observer.observe(header);
+    measure();
+    return () => observer.disconnect();
+  }, [isMobile]);
   const [searchParams, setSearchParams] = useSearchParams();
   const { triggerHaptic } = useHapticFeedback();
 
@@ -225,43 +250,54 @@ export function SwipablePage({
   );
 
   return (
-    <Page className={cn("flex h-full flex-col", className)}>
+    <Page className={cn("flex h-full min-h-0 flex-col", className)}>
       <div
         data-ptr-content
-        className={cn("relative mx-auto flex w-full grow flex-col", contentClassName)}
+        className={cn("relative mx-auto flex min-h-0 w-full flex-1 flex-col", contentClassName)}
       >
         {isMobile ? (
           /* Mobile: SwipableView with navigation */
-          <div className="flex h-full flex-col md:hidden">
+          <div className="flex h-full min-h-0 flex-col md:hidden">
             {/* Mobile Navigation at top */}
-            <div className="pt-safe flex shrink-0 flex-col gap-2 px-3 pb-2">
+            <div
+              aria-hidden="true"
+              className="shrink-0"
+              style={{ height: headerHeight ?? "calc(env(safe-area-inset-top, 0px) + 60px)" }}
+            />
+            {createPortal(
               <div
-                className={cn(
-                  "grid w-full items-center gap-2",
-                  mobileActionsInHeader
-                    ? "grid-cols-[2.5rem_minmax(0,1fr)_auto] min-[390px]:grid-cols-[4.5rem_minmax(0,1fr)_auto]"
-                    : "grid-cols-[1fr_auto_1fr]",
-                )}
+                ref={headerRef}
+                className="pt-safe fixed inset-x-0 top-0 z-40 flex flex-col gap-2 px-4 pb-2"
               >
-                <div className={mobileActionsInHeader ? "w-10 min-[390px]:w-[4.5rem]" : "w-10"} />
-                <div className={cn("min-w-0", mobileActionsInHeader && "justify-self-center")}>
-                  <MobileNavigation
-                    views={views}
-                    currentView={currentView}
-                    onViewChange={handleViewChange}
-                    compact={mobileActionsInHeader}
-                  />
+                <div
+                  className={cn(
+                    "grid w-full items-center gap-2",
+                    mobileActionsInHeader
+                      ? "grid-cols-[minmax(0,1fr)_auto]"
+                      : "grid-cols-[1fr_auto_1fr]",
+                  )}
+                >
+                  {!mobileActionsInHeader && <div className="w-10" />}
+                  <div className={cn("min-w-0", mobileActionsInHeader && "w-full")}>
+                    <MobileNavigation
+                      views={views}
+                      currentView={currentView}
+                      onViewChange={handleViewChange}
+                      compact={mobileActionsInHeader}
+                    />
+                  </div>
+                  {mobileActionsInHeader ? (
+                    <div className="flex min-w-0 shrink-0 justify-end">{currentActions}</div>
+                  ) : (
+                    <div />
+                  )}
                 </div>
-                {mobileActionsInHeader ? (
-                  <div className="flex min-w-0 shrink-0 justify-end">{currentActions}</div>
-                ) : (
-                  <div />
+                {currentActions && !mobileActionsInHeader && (
+                  <div className="flex min-w-0 justify-end">{currentActions}</div>
                 )}
-              </div>
-              {currentActions && !mobileActionsInHeader && (
-                <div className="flex min-w-0 justify-end">{currentActions}</div>
-              )}
-            </div>
+              </div>,
+              document.body,
+            )}
 
             <div className="min-h-0 flex-1 overflow-hidden">
               <SwipableView
@@ -272,7 +308,7 @@ export function SwipablePage({
                   content: (
                     <div
                       className={cn(
-                        withPadding ? "p-2" : "pb-safe",
+                        withPadding && "p-2",
                         withMobileNavOffset && "pb-[var(--mobile-nav-total-offset)]",
                       )}
                     >
@@ -292,7 +328,7 @@ export function SwipablePage({
           </div>
         ) : (
           /* Desktop: Navigation at top center + content below */
-          <div className="hidden h-full flex-col md:flex">
+          <div className="hidden h-full min-h-0 flex-col md:flex">
             {/* Header with Navigation and Actions */}
             <div className="flex shrink-0 items-center justify-between gap-4 px-2 pb-3 pt-4 lg:px-4">
               <div className="titlebar-nudge flex items-center gap-3">

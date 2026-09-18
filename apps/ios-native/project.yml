@@ -1,0 +1,56 @@
+name: WealthfolioNative
+options:
+  deploymentTarget:
+    iOS: "26.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+targets:
+  WealthfolioNative:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashkadam.wealthfolio.native
+        PRODUCT_NAME: Wealthfolio Native
+        SWIFT_OBJC_BRIDGING_HEADER: Sources/NativeEngine.h
+        LIBRARY_SEARCH_PATHS: "$(inherited) $(PROJECT_DIR)/Libraries/$(PLATFORM_NAME)"
+        OTHER_LDFLAGS: ["$(inherited)", "-lwealthfolio_native", "-lc++", "-lz", "-liconv", "-lresolv"]
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      path: build/Info.plist
+      properties:
+        CADisableMinimumFrameDurationOnPhone: true
+        CFBundleDisplayName: Wealthfolio Native
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight, UIInterfaceOrientationPortraitUpsideDown]
+        NSFaceIDUsageDescription: Unlock your Wealthfolio portfolio.
+    dependencies:
+      - sdk: Security.framework
+      - sdk: SystemConfiguration.framework
+      - sdk: CoreFoundation.framework
+  WealthfolioNativeTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies:
+      - target: WealthfolioNative
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yashkadam.wealthfolio.native.tests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  WealthfolioNative:
+    build:
+      targets:
+        WealthfolioNative: all
+    test:
+      targets: [WealthfolioNativeTests]

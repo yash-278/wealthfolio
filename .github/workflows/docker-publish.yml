@@ -1,78 +1,114 @@
-name: Docker
+name: Container image
 
 on:
+  pull_request:
+    branches: [main]
   push:
-    # Publish semver tags as releases.
-    tags: ["v*.*.*"]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      benchmark:
+        description: Measure unchanged, frontend-only and Rust-only cache reuse
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: container-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  image:
+    if: github.repository == 'yash-278/wealthfolio'
+    runs-on: ubuntu-24.04
+    outputs:
+      digest: ${{ steps.publish.outputs.digest }}
+    timeout-minutes: 90
     permissions:
       contents: read
       packages: write
-      # This is used to complete the identity challenge
-      # with sigstore/fulcio when running outside of PRs.
-      id-token: write
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # Set up QEMU for multi-arch builds
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      # Workaround: https://github.com/docker/build-push-action/issues/461
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log into Docker Hub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+      - uses: actions/checkout@v6
         with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Log into GitHub Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v4
+      - name: Build test image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: wealthfolio:test
+          cache-from: type=gha,scope=wealthfolio-amd64
+          cache-to: |
+            type=gha,mode=max,scope=wealthfolio-amd64
+            type=local,dest=/tmp/wealthfolio-build-cache,mode=max
+          labels: |
+            org.opencontainers.image.source=https://github.com/yash-278/wealthfolio
+            org.opencontainers.image.revision=${{ github.sha }}
+      - name: Smoke test disposable container
+        shell: bash
+        run: |
+          set -euo pipefail
+          cleanup() {
+            status=$?
+            if [ "$status" -ne 0 ]; then docker logs wealthfolio-smoke; fi
+            docker rm -f wealthfolio-smoke >/dev/null 2>&1 || true
+            exit "$status"
+          }
+          trap cleanup EXIT
+          export WF_SECRET_KEY
+          WF_SECRET_KEY="$(openssl rand -base64 32)"
+          docker run --detach --name wealthfolio-smoke \
+            --publish 127.0.0.1:18088:8088 \
+            --env WF_SECRET_KEY --env WF_AUTH_REQUIRED=false \
+            --env WF_MCP_ENABLED=false wealthfolio:test
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 \
+            --retry-connrefused --retry-all-errors --max-time 5 \
+            http://127.0.0.1:18088/api/v1/healthz
+          curl --fail --silent --show-error --output /dev/null \
+            http://127.0.0.1:18088/
+      - name: Sign in to GHCR
+        if:
+          github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref ==
+          'refs/heads/main')
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Extract metadata (tags, labels) for Docker
-      # https://github.com/docker/metadata-action
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
+      - name: Publish tested image
+        id: publish
+        if:
+          github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref ==
+          'refs/heads/main')
+        shell: bash
+        env:
+          IMAGE: ghcr.io/yash-278/wealthfolio
+        run: |
+          set -euo pipefail
+          docker tag wealthfolio:test "$IMAGE:sha-$GITHUB_SHA"
+          docker push "$IMAGE:sha-$GITHUB_SHA"
+          digest="$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:sha-$GITHUB_SHA")"
+          printf 'digest=%s\n' "${digest#*@}" >> "$GITHUB_OUTPUT"
+          printf 'Image: `%s`\n' "$digest" >> "$GITHUB_STEP_SUMMARY"
+      - name: Measure cache reuse
+        if: inputs.benchmark
+        run: bash scripts/benchmark-image-cache.sh
+      - name: Save cache measurements
+        if: always() && inputs.benchmark
+        uses: actions/upload-artifact@v4
         with:
-          images: |
-            docker.io/wealthfolio/wealthfolio
-            docker.io/afadil/wealthfolio
-            ghcr.io/${{ github.repository_owner }}/wealthfolio
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-') }}
-            type=sha,format=long
+          name: cache-measurements-${{ github.sha }}
+          path: /tmp/wealthfolio-benchmark/
 
-      # Build and push Docker image with Buildx (don't push on PR)
-      # https://github.com/docker/build-push-action
-      - name: Build and push Docker image
-        id: build-and-push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            CONNECT_AUTH_URL=${{ vars.CONNECT_AUTH_URL }}
-            CONNECT_AUTH_PUBLISHABLE_KEY=${{ vars.CONNECT_AUTH_PUBLISHABLE_KEY }}
-            CONNECT_API_URL=${{ vars.CONNECT_API_URL }}
+  deploy:
+    needs: image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/promote-railway.yml
+    secrets:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    with:
+      digest: ${{ needs.image.outputs.digest }}

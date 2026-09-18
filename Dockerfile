@@ -1,96 +1,62 @@
-# Global build args
-ARG RUST_IMAGE=rust:1.95-alpine
+# syntax=docker/dockerfile:1
+FROM node:24.11.0-alpine AS frontend-deps
+WORKDIR /app
+RUN npm install -g pnpm@10.33.4
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/frontend/package.json apps/frontend/package.json
+COPY packages/ui/package.json packages/ui/package.json
+COPY packages/addon-sdk/package.json packages/addon-sdk/package.json
+COPY packages/addon-dev-tools/package.json packages/addon-dev-tools/package.json
+ENV CI=1
+RUN pnpm install --frozen-lockfile
 
-# Stage 1: build frontend
-# Use --platform=$BUILDPLATFORM to run on the native runner (fast)
-FROM --platform=$BUILDPLATFORM node:24-alpine AS frontend
-
-# Wealthfolio Connect configuration (baked into JS bundle at build time)
-# Pass via --build-arg to enable; omit to build without Connect.
+FROM frontend-deps AS frontend
+COPY tsconfig*.json ./
+COPY packages ./packages
+COPY apps/frontend ./apps/frontend
+COPY apps/tauri/tauri.conf.json apps/tauri/tauri.conf.json
+COPY apps/server/src/api.rs apps/server/src/api.rs
 ARG CONNECT_AUTH_URL=
 ARG CONNECT_AUTH_PUBLISHABLE_KEY=
-ENV CONNECT_AUTH_URL=${CONNECT_AUTH_URL}
-ENV CONNECT_AUTH_PUBLISHABLE_KEY=${CONNECT_AUTH_PUBLISHABLE_KEY}
-
-WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY . .
-ENV CI=1
-ENV BUILD_TARGET=web
-RUN npm install -g pnpm@10.33.4 && pnpm install --frozen-lockfile
-# Build only the main app to avoid building workspace addons in this image
+ENV CONNECT_AUTH_URL=${CONNECT_AUTH_URL} CONNECT_AUTH_PUBLISHABLE_KEY=${CONNECT_AUTH_PUBLISHABLE_KEY} BUILD_TARGET=web
 RUN pnpm --filter frontend... build && mv dist /web-dist
 
-# Stage 2: build server with cross-compilation
-FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
-
-FROM --platform=$BUILDPLATFORM ${RUST_IMAGE} AS backend
-# Copy xx scripts to handle cross-compilation
-COPY --from=xx / /
-ARG TARGETPLATFORM
-
-# Wealthfolio Connect configuration (baked into server binary at build time)
-ARG CONNECT_AUTH_URL=
-ARG CONNECT_AUTH_PUBLISHABLE_KEY=
-ENV CONNECT_AUTH_URL=${CONNECT_AUTH_URL}
-ENV CONNECT_AUTH_PUBLISHABLE_KEY=${CONNECT_AUTH_PUBLISHABLE_KEY}
-
+FROM rust:1.95-alpine AS chef
 WORKDIR /app
+RUN apk add --no-cache clang lld build-base git pkgconfig openssl-dev openssl-libs-static sqlite-dev
+RUN cargo install cargo-chef --version 0.1.73 --locked
+ENV OPENSSL_STATIC=1 CARGO_BUILD_JOBS=2
+RUN mkdir -p .cargo && printf '[profile.release.package."*"]\nopt-level=1\n' > .cargo/config.toml
+ARG RELEASE_OPT_LEVEL=0
+ENV CARGO_PROFILE_RELEASE_OPT_LEVEL=${RELEASE_OPT_LEVEL}
 
-# Install build tools for the HOST (to run cargo, build scripts)
-# clang/lld are needed for cross-linking
-# pkgconfig is required for openssl-sys to find the target libraries
-RUN apk add --no-cache clang lld build-base git file pkgconfig
-
-# Install TARGET dependencies
-# xx-apk installs into /$(xx-info triple)/...
-RUN xx-apk add --no-cache musl-dev gcc openssl-dev openssl-libs-static sqlite-dev
-
-# Install rust target
-RUN rustup target add $(xx-cargo --print-target-triple)
-
-# Leverage Docker layer caching for dependencies
+FROM chef AS planner
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY apps/server ./apps/server
-# Stub out apps/tauri so the workspace resolves (not built in Docker)
 COPY apps/tauri/Cargo.toml apps/tauri/Cargo.toml
-RUN mkdir -p apps/tauri/src && echo "fn main(){}" > apps/tauri/src/main.rs && echo "" > apps/tauri/src/lib.rs
-RUN mkdir -p apps/server/src && \
-    echo "fn main(){}" > apps/server/src/main.rs && \
-    xx-cargo fetch --manifest-path apps/server/Cargo.toml
+RUN mkdir -p apps/tauri/src && printf 'fn main(){}' > apps/tauri/src/main.rs && touch apps/tauri/src/lib.rs
+RUN cargo chef prepare --recipe-path recipe.json
 
-# Now copy full sources
+FROM chef AS backend-deps
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json --package wealthfolio-server
+
+FROM backend-deps AS backend
+COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY apps/server ./apps/server
-ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
-ENV OPENSSL_STATIC=1
-# Bound compiler memory and optimization time on Railway builders.
-ENV CARGO_BUILD_JOBS=4
-ENV CARGO_PROFILE_RELEASE_OPT_LEVEL=0
-# Build using xx-cargo which handles target flags
-RUN xx-cargo build --release --config 'profile.release.package."*".opt-level=1' --manifest-path apps/server/Cargo.toml && \
-    # Move the binary to a predictable location because the target dir changes with --target
-    cp target/$(xx-cargo --print-target-triple)/release/wealthfolio-server /wealthfolio-server
+ARG CONNECT_AUTH_URL=
+ARG CONNECT_AUTH_PUBLISHABLE_KEY=
+ENV CONNECT_AUTH_URL=${CONNECT_AUTH_URL} CONNECT_AUTH_PUBLISHABLE_KEY=${CONNECT_AUTH_PUBLISHABLE_KEY}
+RUN cargo build --locked --release --package wealthfolio-server
 
-# Final stage
-FROM alpine:3.19
+FROM alpine:3.19 AS runtime
 WORKDIR /app
-# Copy from backend (which is now build platform, but binary is target platform)
-COPY --from=backend /wealthfolio-server /usr/local/bin/wealthfolio-server
+COPY --from=backend /app/target/release/wealthfolio-server /usr/local/bin/wealthfolio-server
 COPY --from=frontend /web-dist ./dist
 ENV WF_DB_PATH=/data/wealthfolio.db
-# Wealthfolio Connect API URL (can be overridden at runtime via -e or docker-compose)
-ARG CONNECT_API_URL=
-ENV CONNECT_API_URL=${CONNECT_API_URL}
-
-# Run as non-root. Railway supplies the persistent volume at /data.
-# Existing volumes must be owned by UID 1000.
-RUN addgroup -S -g 1000 wealthfolio \
- && adduser -S -u 1000 -G wealthfolio -H -s /sbin/nologin wealthfolio \
- && mkdir -p /data \
- && chown -R wealthfolio:wealthfolio /data
+RUN addgroup -S -g 1000 wealthfolio && adduser -S -u 1000 -G wealthfolio -H -s /sbin/nologin wealthfolio && mkdir -p /data && chown wealthfolio:wealthfolio /data
 USER 1000:1000
-
 EXPOSE 8088
 CMD ["/usr/local/bin/wealthfolio-server"]

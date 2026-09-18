@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "0611B7A201FCFBBF724846B3"
-               BuildableName = "Wealthfolio.app"
+               BuildableName = "Wealthfolio Personal.app"
                BlueprintName = "wealthfolio-app_iOS"
                ReferencedContainer = "container:wealthfolio-app.xcodeproj">
             </BuildableReference>
@@ -31,7 +31,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "0611B7A201FCFBBF724846B3"
-            BuildableName = "Wealthfolio.app"
+            BuildableName = "Wealthfolio Personal.app"
             BlueprintName = "wealthfolio-app_iOS"
             ReferencedContainer = "container:wealthfolio-app.xcodeproj">
          </BuildableReference>
@@ -66,7 +66,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "0611B7A201FCFBBF724846B3"
-            BuildableName = "Wealthfolio.app"
+            BuildableName = "Wealthfolio Personal.app"
             BlueprintName = "wealthfolio-app_iOS"
             ReferencedContainer = "container:wealthfolio-app.xcodeproj">
          </BuildableReference>
@@ -95,7 +95,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "0611B7A201FCFBBF724846B3"
-            BuildableName = "Wealthfolio.app"
+            BuildableName = "Wealthfolio Personal.app"
             BlueprintName = "wealthfolio-app_iOS"
             ReferencedContainer = "container:wealthfolio-app.xcodeproj">
          </BuildableReference>
